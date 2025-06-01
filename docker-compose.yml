@@ -1,0 +1,12 @@
+services:
+  figgie-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: figgie-server
+    ports:
+      - "8000:5000"
+    environment:
+      - NUM_PLAYERS=4
+      - TRADING_DURATION=60
+    restart: unless-stopped
