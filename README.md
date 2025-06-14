@@ -36,9 +36,9 @@ Built with Python 3.13
   ```
 
 3. Install dependencies:
-   ```shell
-   pip install -r requirements.txt
-   ```
+  ```shell
+  pip install -r requirements.txt
+  ```
 
 4. Run the server:
   ```shell
@@ -297,6 +297,8 @@ There are several improvements that could be made to the server. To name a few:
 6. Adding a GUI.
 
 While all of these features would undoubtedly make for a better Figgie server, none of these will be prioritized. This project's real goal is to allow for the creation and evaluation of agents, not to recreate the official implementation of the game. 
+
+### Building Out Agents
 
 Instead, plans for this project are to implement different trading strategies and evaluate performance.
 
