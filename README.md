@@ -4,6 +4,8 @@ This project implements a server for running rounds of the Figgie game. It provi
 
 Official implementation: https://www.figgie.com
 
+Built with Python 3.13
+
 ## Table of Contents
 
 - [Getting Started](#getting-started)
