@@ -24,15 +24,16 @@ Built with Python 3.13
 ## Getting Started
 
 1. Clone the repository:
-   ```shell
-   git clone <repository-url>
-   cd FiggieServer
-   ```
+  ```shell
+  git clone git@github.com:LSeaburg/FiggieServer.git
+  cd FiggieServer
+  ```
 
 2. Create virtualenv (optional)
   ```shell
   python -m venv my_venv
   source .my_venv/bin/activate
+  ```
 
 3. Install dependencies:
    ```shell
@@ -41,7 +42,7 @@ Built with Python 3.13
 
 4. Run the server:
   ```shell
-  docker compose --build up
+  docker compose up --build -d
   ```
 
 The server will start on `http://localhost:8000`.
@@ -106,7 +107,7 @@ Fetch the current game state from the perspective of a specific player.
   - `player_id`: Unique player identifier returned by `/join`.
 
 - Response (200 OK):
-  ```json
+  ```
   {
     "state": "waiting|trading|completed",
     "time_left": <int|null>,     // normalized 0–240 units during trading, null otherwise
@@ -144,7 +145,7 @@ Fetch the current game state from the perspective of a specific player.
 Place or cancel orders during the trading phase.
 
 - Request body (JSON):
-  ```json
+  ```
   {
     "player_id": "<your-player-id>",
     "type": "order" | "cancel",
