@@ -272,11 +272,19 @@ if __name__ == "__main__":
 
 This project has several intentional differences when compared to the official implementation.
 
-1. You are sucessfully able to place orders that are worse' than or equal to the the current best order (bids that are lower than the current bid, asks higher than the current ask). Placing orders first gives priority, so this changes can only make a material difference when orders are cancelled (these orders are not broadcast until the current order is cancelled).
+1. You are sucessfully able to place orders that are worse than or equal to the the current best order (bids that are lower than the current bid, asks higher than the current ask). Placing orders first gives priority, so this change will only make a material difference when orders are cancelled (these orders are not broadcast until the current order is cancelled).
 
 2. In the official implementation, a person that places a bid and an ask on a suit that would result in a strike would effectively cancel all bids and asks on said suit. In this implementation, attempting to place an order that would result in a strike with oneself return a 400 error. 
 
-3. This implementation gives the ability to have variable round time. However, in order to keep similarity with the official implementation, remaining time as returned by a call to `state` is always given as an int in the range of (0, 240). If a round is 60 seconds long, every real second passed decrements the remaining time by 4 counts. In this example agents are able to experience the same simulated experience by increasing the polling rate by a factor of 4. 
+3. Clients are given more control over order cancellation. Instead of having to cancel all orders of a specific type, clients can choose to only cancel orders of specific amounts. 
+
+4. The server doesn't offer a way to buy or sell a card, effectively allowing a client to auto-accept the best bid or ask. Instead a client has to make an offer that will hit the strike price and execute a trade.
+
+5. This implementation gives the ability to have variable round time. However, in order to keep similarity with the official implementation, remaining time as returned by a call to `state` is always given as an int in the range of (0, 240). If a round is 60 seconds long, every real second passed decrements the remaining time by 4 counts. In this example agents are able to experience the same simulated experience by increasing the polling rate by a factor of 4. 
+
+While it wouldn't be difficult to bring the behavior of this server closer in line to that of the official Figgie implementation, I currently intend to keep these changes. They are minor enough as to not majorly impact any of the agent's behavior and are all features that would be expected to be seen in a real exchange.
+
+For example, none of the official Jane Street bots cancel orders. The few times I have seen players on Figgie.com cancel orders were in matches against bots that were using order cancellation as a form of abuse.
 
 ## Future Roadmap
 
@@ -290,17 +298,17 @@ There are several improvements that could be made to the server. To name a few:
 
 3. Allowing player number and round duration to be configured on a per-room basis.
 
-4. Allowing persisting rooms, where the reamaining balance from one round carries to the next.
+4. Allowing persisting rooms where the reamaining balances from one round carry to the next.
 
-5. Securing state calls.
+5. Securing calls to prevent other actors from getting info on an opponent's hand of cards with just a player id.
 
 6. Adding a GUI.
 
-While all of these features would undoubtedly make for a better Figgie server, none of these will be prioritized. This project's real goal is to allow for the creation and evaluation of agents, not to recreate the official implementation of the game. 
+While all of these features would undoubtedly make for a better Figgie server, none of these will be prioritized. This project's main goal is to allow for the creation and evaluation of agents, not to recreate the official implementation of the game. 
 
 ### Building Out Agents
 
-Instead, plans for this project are to implement different trading strategies and evaluate performance.
+Plans for this project are to implement different trading strategies and evaluate performance.
 
 The largest priority at this time is to develop a better framework/pipeline for running agents and tracking evaluation metrics.
 
@@ -308,10 +316,12 @@ Some of the agents to be developed include:
 
 1. A noise trader
 
-2. A replication of the fundamentalist agent described in [this paper](https://arxiv.org/pdf/2110.00879):
+2. A replication of the fundamentalist agent described in [this paper](https://arxiv.org/pdf/2110.00879)
 
 3. A version of the fundamentalist strategy that includes infrences based on the behavior of other players
 
 4. Other implementations of various agents described in prior implementations, such as in [this project](https://github.com/0xDub/figgie-auto)
+
+5. A game-theory centered analysis and approach
 
 After creating a few different agent strategies I plan on adding a way to implement reinforcement learning to improve agent performance.
