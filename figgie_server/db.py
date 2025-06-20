@@ -72,6 +72,10 @@ def init_db():
             CREATE TABLE IF NOT EXISTS results(
                 round_id TEXT PRIMARY KEY,
                 results TEXT,
+                initial_balances TEXT,
+                final_balances TEXT,
+                initial_hands TEXT,
+                final_hands TEXT,
                 timestamp DATETIME
             )
         ''')
@@ -131,7 +135,7 @@ def log_trade(round_id: str, trade, time_remaining: int):
         )
         conn.commit()
 
-def log_round_end(round_id: str, results: dict):
+def log_round_end(round_id: str, results: dict, initial_balances: dict, final_balances: dict, initial_hands: dict, final_hands: dict):
     conn = get_connection()
     with _db_lock:
         # Update end_time in rounds
@@ -139,9 +143,17 @@ def log_round_end(round_id: str, results: dict):
             'UPDATE rounds SET end_time = ? WHERE round_id = ?',
             (datetime.utcnow(), round_id)
         )
-        # Store results JSON
+        # Store results and state snapshots as JSON
         conn.execute(
-            'INSERT OR REPLACE INTO results(round_id, results, timestamp) VALUES (?, ?, ?)',
-            (round_id, json.dumps(results), datetime.utcnow())
+            'INSERT OR REPLACE INTO results(round_id, results, initial_balances, final_balances, initial_hands, final_hands, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            (
+                round_id,
+                json.dumps(results),
+                json.dumps(initial_balances),
+                json.dumps(final_balances),
+                json.dumps(initial_hands),
+                json.dumps(final_hands),
+                datetime.utcnow()
+            )
         )
         conn.commit()

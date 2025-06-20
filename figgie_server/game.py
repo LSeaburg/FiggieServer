@@ -54,6 +54,7 @@ class Game:
         self.players: Dict[str, Player] = {}               # pid -> Player
         self.orders: Dict[str, Order] = {}                 # oid -> Order
         self.initial_balances: Dict[str, int] = {}         # pid -> balance
+        self.initial_hands: Dict[str, Dict] = {}           # pid -> hand
         # Markets per suit
         self.markets: Dict[str, Market] = {s: Market() for s in SUITS}
         self.trades: List[Trade] = []                      # executed trades
@@ -111,6 +112,9 @@ class Game:
                 dealt = deck.pop()
                 self.players[pid].hand[dealt] += 1
 
+        # record initial hands after dealing cards
+        self.initial_hands = {pid: p.hand.copy() for pid, p in self.players.items()}
+
         self.state = "trading"
         self.start_time = datetime.now().timestamp()
         logger.info("Round state changed to 'trading'.")
@@ -135,8 +139,15 @@ class Game:
         self.results = {"goal_suit": goal, "counts": counts, "bonuses": bonuses,
                         "winners": winners, "share_each": share}
         logger.info(f"Results computed: {self.results}")
-        # log round end
-        db.log_round_end(self.round_id, self.results)
+        # log round end with snapshots
+        db.log_round_end(
+            self.round_id,
+            self.results,
+            self.initial_balances,
+            {pid: p.money for pid, p in self.players.items()},
+            self.initial_hands,
+            {pid: p.hand.copy() for pid, p in self.players.items()}
+        )
         self.pot = 0
         self.state = "completed"
         logger.info("Round state changed to 'completed'.")
