@@ -32,6 +32,19 @@ class Game:
         self.reset()
         logger.info("Initialized new Game instance.")
 
+    def _compute_or_finalize_time(self) -> int:
+        """
+        Compute and normalize the remaining trading time to a 0-240 scale.
+        Ends the round if time has expired.
+        """
+        now = datetime.now().timestamp()
+        elapsed = now - (self.start_time or now)
+        raw_time_left = max(0.0, TRADING_DURATION - elapsed)
+        if raw_time_left <= 0.0:
+            self.end_round()
+            raw_time_left = 0.0
+        return int(raw_time_left / TRADING_DURATION * 240)
+
     def reset(self) -> None:
         self.state = "waiting"          # waiting, trading, completed
         self.players: Dict[str, Player] = {}               # pid -> Player
@@ -133,6 +146,8 @@ class Game:
 
     def place_order(self, pid: str, otype: str, suit: str, price: int) -> Tuple[dict, Optional[str]]:
         # validation
+        if (time_remaining := self._compute_or_finalize_time() == 0):
+            return None, "Round has ended"
         if otype not in ("buy", "sell"): 
             return None, "Invalid order_type"
         if suit not in SUITS: 
@@ -206,6 +221,8 @@ class Game:
         Returns a dict with canceled order IDs, or an error message.
         """
         # validation
+        if (time_remaining := self._compute_or_finalize_time() == 0):
+            return None, "Round has ended"
         if otype not in ("buy", "sell", "both"): 
             return None, "Invalid order_type"
         if suit not in ("all", *SUITS): 
@@ -233,18 +250,9 @@ class Game:
         return {'canceled': canceled}, None
 
     def get_state(self, req_pid: str) -> dict:
-        now = datetime.now().timestamp()
         time_left = None
         if self.state == "trading":
-            elapsed = now - (self.start_time or now)
-            # compute raw time left in seconds (allow fractional seconds for smoother normalization)
-            raw_time_left = max(0.0, TRADING_DURATION - elapsed)
-            if raw_time_left <= 0.0:
-                # end the round when time is up
-                self.end_round()
-                raw_time_left = 0.0
-            # normalize time_left to a scale of 0-240 based on TRADING_DURATION
-            time_left = int(raw_time_left / TRADING_DURATION * 240)
+            time_left = self._compute_or_finalize_time()
 
         # Requester's current hand
         requester_hand = self.players[req_pid].hand.copy()

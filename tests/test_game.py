@@ -234,4 +234,30 @@ class TestGame(unittest.TestCase):
         self.assertEqual(trade['seller'], s1)
         self.assertEqual(trade['buyer'], buyer)
 
+    def test_compute_time_positive(self):
+        # simulate half of trading duration elapsed
+        game = Game()
+        game.state = 'trading'
+        # set start_time so that elapsed = TRADING_DURATION / 2
+        half = TRADING_DURATION / 2
+        game.start_time = time.time() - half
+        time_left = game._compute_or_finalize_time()
+        # raw_time_left = TRADING_DURATION - half
+        expected = int((TRADING_DURATION - half) / TRADING_DURATION * 240)
+        # allow off-by-one due to timing precision
+        self.assertAlmostEqual(time_left, expected, delta=1)
+        # state should still be trading
+        self.assertNotEqual(game.state, 'completed')
 
+    def test_compute_time_expired(self):
+        # simulate trading duration plus extra elapsed
+        game = Game()
+        game.state = 'trading'
+        game.pot = 50
+        # set start_time so that elapsed > TRADING_DURATION
+        game.start_time = time.time() - (TRADING_DURATION + 1)
+        time_left = game._compute_or_finalize_time()
+        self.assertEqual(time_left, 0)
+        # after expiration, state should be completed and results set
+        self.assertEqual(game.state, 'completed')
+        self.assertIsInstance(game.results, dict)
