@@ -47,13 +47,13 @@ class TestAppEndpoints(unittest.TestCase):
         pid = next(iter(self.game.players))
         rv2 = self.client.post('/action', json={'player_id': pid})
         self.assertEqual(rv2.status_code, 400)
-        rv3 = self.client.post('/action', json={'player_id': pid, 'type': 'foobar'})
+        rv3 = self.client.post('/action', json={'player_id': pid, 'action_type': 'foobar'})
         self.assertEqual(rv3.status_code, 400)
 
     def test_action_order_errors(self):
         self._join_all_players()
         pid = next(iter(self.game.players))
-        base = {'player_id': pid, 'type': 'order'}
+        base = {'player_id': pid, 'action_type': 'order'}
         r1 = self.client.post('/action', json={**base, 'order_type': 'foo', 'suit': 'spades'})
         self.assertEqual(r1.status_code, 400)
         r2 = self.client.post('/action', json={**base, 'order_type': 'buy', 'suit': 'invalid'})
@@ -62,7 +62,7 @@ class TestAppEndpoints(unittest.TestCase):
         self.assertEqual(r3.status_code, 400)
         r4 = self.client.post('/action', json={**base, 'order_type': 'buy', 'suit': 'spades', 'price': 9999})
         self.assertEqual(r4.status_code, 400)
-        r5 = self.client.post('/action', json={'player_id': pid, 'type': 'order', 'order_type': 'sell', 'suit': 'spades'})
+        r5 = self.client.post('/action', json={'player_id': pid, 'action_type': 'order', 'order_type': 'sell', 'suit': 'spades'})
         self.assertEqual(r5.status_code, 400)
 
     def test_order_and_cancel_happy_path(self):
@@ -74,17 +74,17 @@ class TestAppEndpoints(unittest.TestCase):
         self.game.players[seller].hand['spades'] = 1
         self.game.players[buyer].money = 1000
         # buy
-        resp1 = self.client.post('/action', json={'player_id': buyer, 'type': 'order', 'order_type': 'buy', 'suit': 'spades','price':50})
+        resp1 = self.client.post('/action', json={'player_id': buyer, 'action_type': 'order', 'order_type': 'buy', 'suit': 'spades','price':50})
         self.assertEqual(resp1.status_code, 200)
         bid_oid = resp1.get_json().get('order_id')
         # sell
-        resp2 = self.client.post('/action', json={'player_id': seller, 'type':'order','order_type':'sell','suit':'spades','price':50})
+        resp2 = self.client.post('/action', json={'player_id': seller, 'action_type':'order','order_type':'sell','suit':'spades','price':50})
         self.assertEqual(resp2.status_code, 200)
         self.assertIn('trade', resp2.get_json())
         # cancel
-        resp3 = self.client.post('/action', json={'player_id': buyer,'type':'order','order_type':'buy','suit':'clubs','price':20})
+        resp3 = self.client.post('/action', json={'player_id': buyer,'action_type':'order','order_type':'buy','suit':'clubs','price':20})
         oid2 = resp3.get_json().get('order_id')
-        resp4 = self.client.post('/action', json={'player_id': buyer, 'type':'cancel', 'order_type':'buy', 'suit':'clubs', 'price': 20})
+        resp4 = self.client.post('/action', json={'player_id': buyer, 'action_type':'cancel', 'order_type':'buy', 'suit':'clubs', 'price': 20})
         self.assertEqual(resp4.status_code, 200)
         self.assertTrue(resp4.get_json().get('success'))
 

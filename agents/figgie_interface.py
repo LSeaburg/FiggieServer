@@ -250,7 +250,7 @@ class FiggieInterface:
     def _place(self, otype: str, suit: str, price: int) -> Any:
         """Internal helper for placing orders (buy or sell)."""
         payload: Dict[str, Any] = {
-            "type": "order",
+            "action_type": "order",
             "player_id": self.player_id,
             "order_type": otype,
             "suit": suit,
@@ -292,7 +292,7 @@ class FiggieInterface:
             return []
         # Use bulk cancel API to cancel both buy and sell orders for this suit
         payload: Dict[str, Any] = {
-            "type": "cancel",
+            "action_type": "cancel",
             "player_id": self.player_id,
             "order_type": "both",
             "suit": suit,

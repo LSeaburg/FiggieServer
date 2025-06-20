@@ -124,7 +124,7 @@ class TestFiggieInterface(unittest.TestCase):
         # second post should be action
         mock_post.assert_called_with(
             f"{self.server_url}/action",
-            json={'type': 'order', 'player_id': self.player_id, 'order_type': 'buy', 'suit': 's', 'price': 15}
+            json={'action_type': 'order', 'player_id': self.player_id, 'order_type': 'buy', 'suit': 's', 'price': 15}
         )
         # test offer
         mock_post.reset_mock()
@@ -134,7 +134,7 @@ class TestFiggieInterface(unittest.TestCase):
         self.assertEqual(result_offer, {'result': 'ok'})
         mock_post.assert_called_with(
             f"{self.server_url}/action",
-            json={'type': 'order', 'player_id': self.player_id, 'order_type': 'sell', 'suit': 'h', 'price': 20}
+            json={'action_type': 'order', 'player_id': self.player_id, 'order_type': 'sell', 'suit': 'h', 'price': 20}
         )
 
     @patch('agents.figgie_interface.requests.post')
@@ -181,7 +181,7 @@ class TestFiggieInterface(unittest.TestCase):
         self.assertEqual(res, ['id1', 'id2'])
         mock_post.assert_called_with(
             f"{self.server_url}/action",
-            json={'type': 'cancel', 'player_id': self.player_id, 'order_type': 'both', 'suit': 't', 'price': -1}
+            json={'action_type': 'cancel', 'player_id': self.player_id, 'order_type': 'both', 'suit': 't', 'price': -1}
         )
         # test cancel_all
         mock_post.reset_mock()
@@ -191,7 +191,7 @@ class TestFiggieInterface(unittest.TestCase):
         self.assertEqual(res2, ['id1', 'id2'])
         mock_post.assert_called_with(
             f"{self.server_url}/action",
-            json={'type': 'cancel', 'player_id': self.player_id, 'order_type': 'both', 'suit': 'all', 'price': -1}
+            json={'action_type': 'cancel', 'player_id': self.player_id, 'order_type': 'both', 'suit': 'all', 'price': -1}
         )
 
     @patch('agents.figgie_interface.requests.post')

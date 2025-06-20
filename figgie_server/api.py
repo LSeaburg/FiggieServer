@@ -45,7 +45,7 @@ def action():
     if game.state != "trading":
         return jsonify(error="Trading not active"), 400
     with lock:
-        atype = data.get("type")
+        atype = data.get("action_type")
         if atype == "order":
             result, err = game.place_order(pid,
                                           data.get("order_type"),

@@ -148,7 +148,7 @@ Place or cancel orders during the trading phase.
   ```
   {
     "player_id": "<your-player-id>",
-    "type": "order" | "cancel",
+    "action_type": "order" | "cancel",
     // for "order":
     "order_type": "buy" | "sell",
     "suit": "spades" | "clubs" | "hearts" | "diamonds",
