@@ -152,7 +152,6 @@ class TestGame(unittest.TestCase):
         st3 = self.game.get_state(self.pid1)
         self.assertEqual(st3['state'], 'completed')
         self.assertIn('results', st3)
-        self.assertIn('hands', st3)
 
     def test_place_order_sell_insertion(self):
         # Test ascending insertion of sell orders (covers lines 190-196 in game.py)

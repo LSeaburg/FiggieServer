@@ -134,9 +134,7 @@ Fetch the current game state from the perspective of a specific player.
       "bonuses": {"<pid>":<int>, ...},
       "winners": ["<pid>", ...],
       "share_each": <int>
-    },
-    "hands": {"<pid>": { ... }, ...} // all players' final hands when completed
-    "initial_balances": {"<pid>": <int>, ...}   // all players' initial balance
+    }
   }
   ```
 - Errors (400 Bad Request):

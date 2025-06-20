@@ -322,6 +322,4 @@ class Game:
         }
         if self.state == "completed":
             resp["results"] = self.results
-            resp["hands"] = {pid: p.hand.copy() for pid, p in self.players.items()}
-            resp["initial_balances"] = self.initial_balances
         return resp
