@@ -107,13 +107,13 @@ def log_order(round_id: str, order, time_remaining: int):
         )
         conn.commit()
 
- def log_cancellation(round_id: str, order, time_remaining: int):
+def log_cancellation(round_id: str, order, time_remaining: int):
     conn = get_connection()
     with _db_lock:
         conn.execute(
             '''INSERT INTO actions
                 (action_type, round_id, order_id, player_id, order_type, suit, price, time_remaining, timestamp)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
             ('cancellation', round_id, order.order_id, order.player_id, order.type,
              order.suit, order.price, time_remaining, datetime.utcnow())
         )
@@ -125,7 +125,7 @@ def log_trade(round_id: str, trade, time_remaining: int):
         conn.execute(
             '''INSERT INTO trades
                 (round_id, buyer, seller, suit, price, time_remaining, timestamp)
-               VALUES (?, ?, ?, ?, ?, ?)''',
+               VALUES (?, ?, ?, ?, ?, ?, ?)''',
             (round_id, trade.buyer, trade.seller, trade.suit,
              trade.price, time_remaining, datetime.utcnow())
         )
