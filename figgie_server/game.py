@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple, Any
 
 from figgie_server.models import Order, Trade, Player, Market
+from figgie_server import db
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,6 +30,9 @@ SUIT_COLORS = {
 
 class Game:
     def __init__(self) -> None:
+        # Initialize database
+        db.init_db()
+        self.round_id = None
         self.reset()
         logger.info("Initialized new Game instance.")
 
@@ -57,12 +61,17 @@ class Game:
         self.suit_counts: Optional[Dict[str,int]] = None   # counts per suit
         self.goal_suit: Optional[str] = None
         self.results: Optional[dict] = None
+        # generate a new round ID
+        self.round_id = uuid.uuid4().hex
+        db.log_round_start(self.round_id)
         logger.info("Game state has been reset.")
 
     def add_player(self, name: str) -> str:
         pid = uuid.uuid4().hex
         self.players[pid] = Player(player_id=pid, name=name)
         logger.info(f"Player added: {name} (ID: {pid})")
+        # log player join
+        db.log_player(pid, name)
         return pid
 
     def can_start(self) -> bool:
@@ -119,6 +128,8 @@ class Game:
         self.results = {"goal_suit": goal, "counts": counts, "bonuses": bonuses,
                         "winners": winners, "share_each": share}
         logger.info(f"Results computed: {self.results}")
+        # log round end
+        db.log_round_end(self.round_id, self.results)
         self.pot = 0
         self.state = "completed"
         logger.info("Round state changed to 'completed'.")
@@ -179,6 +190,8 @@ class Game:
             self.players[seller].money += match.price
             tr = Trade(buyer=buyer, seller=seller, price=match.price, suit=suit)
             self.trades.append(tr)
+            # log trade in DB
+            db.log_trade(self.round_id, tr, time_remaining)
             # clear all orders in all markets
             self.orders.clear()
             for m in self.markets.values():
@@ -190,6 +203,8 @@ class Game:
         oid = uuid.uuid4().hex
         new_o = Order(order_id=oid, player_id=pid, type=otype, suit=suit, price=price)
         self.orders[oid] = new_o
+        # log order in DB
+        db.log_order(self.round_id, new_o, time_remaining)
         # insert order in sorted position (stable for same price)
         if otype == "buy":
             # descending order
@@ -246,6 +261,8 @@ class Game:
                 if o.type == 'sell' and o in market.offers:
                     market.offers.remove(o)
                 canceled.append(oid)
+                # log cancellation in DB
+                db.log_cancellation(self.round_id, o, time_remaining)
                 del self.orders[oid]
         return {'canceled': canceled}, None
 
