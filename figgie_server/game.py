@@ -53,6 +53,7 @@ class Game:
         self.state = "waiting"          # waiting, trading, completed
         self.players: Dict[str, Player] = {}               # pid -> Player
         self.orders: Dict[str, Order] = {}                 # oid -> Order
+        self.initial_balances: Dict[str, int] = {}         # pid -> balance
         # Markets per suit
         self.markets: Dict[str, Market] = {s: Market() for s in SUITS}
         self.trades: List[Trade] = []                      # executed trades
@@ -86,11 +87,10 @@ class Game:
         self.goal_suit = next(s for s in SUITS if s != twelve and SUIT_COLORS[s] == col12)
         logger.info(f"Suit counts: {self.suit_counts}, goal: {self.goal_suit}")
 
-        deck: List[str] = []
-        for suit, cnt in self.suit_counts.items():
-            deck.extend([suit] * cnt)
-        random.shuffle(deck)
+        # record initial money balances of players at start of round
+        self.initial_balances = {pid: p.money for pid, p in self.players.items()}
 
+        # collect ante
         ante = 200 // NUM_PLAYERS
         self.pot = ante * NUM_PLAYERS
         for p in self.players.values():
@@ -98,6 +98,13 @@ class Game:
             p.hand = {s: 0 for s in SUITS}
         logger.info(f"Pot initialized to ${self.pot}")
 
+        # shuffle the deck
+        deck: List[str] = []
+        for suit, cnt in self.suit_counts.items():
+            deck.extend([suit] * cnt)
+        random.shuffle(deck)
+
+        # deal the cards
         per = len(deck) // NUM_PLAYERS
         for _ in range(per):
             for pid in self.players:
@@ -305,4 +312,5 @@ class Game:
         if self.state == "completed":
             resp["results"] = self.results
             resp["hands"] = {pid: p.hand.copy() for pid, p in self.players.items()}
+            resp["initial_balances"] = self.initial_balances
         return resp
