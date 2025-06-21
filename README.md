@@ -33,13 +33,13 @@ Docker 27.5
 
 2. Create virtualenv (optional)
   ```shell
-  python -m venv my_venv
-  source .my_venv/bin/activate
+  python -m venv .venv
+  source .venv/bin/activate
   ```
 
 3. Install dependencies:
   ```shell
-  pip install -r requirements.txt
+  pip install -r requirements-dev.txt
   ```
 
 4. Run the server:
