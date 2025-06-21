@@ -4,7 +4,9 @@ This project implements a server for running rounds of the Figgie game. It provi
 
 Official implementation: https://www.figgie.com
 
-Built with Python 3.13
+## Requirements
+Python 3.13
+Docker 27.5
 
 ## Table of Contents
 
@@ -44,18 +46,6 @@ Built with Python 3.13
   ```shell
   docker compose up --build -d
   ```
-
-The server will start on `http://localhost:8000`.
-
-  Alternatively, without Docker
-   ```shell
-   export PORT=5000          # optional, defaults to 5000
-   export NUM_PLAYERS=4      # optional, 4 or 5 players
-   export TRADING_DURATION=240  # optional, trading phase duration in seconds
-   python figgie_server/api.py
-   ```
-
-The server will start on `http://0.0.0.0:$PORT`.
 
 5. Run sample agents:
   ```shell 
