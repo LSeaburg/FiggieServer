@@ -1,0 +1,10 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=figgie
+      - POSTGRES_USER=figgie
+      - POSTGRES_PASSWORD=secret_password
+    ports:
+      - "5433:5432"
+    restart: "no"

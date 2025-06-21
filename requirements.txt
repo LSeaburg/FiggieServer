@@ -1,4 +1,8 @@
 flask
 requests
+psycopg
+psycopg-binary
 coverage
 pytest
+pytest-docker
+pytest-postgresql

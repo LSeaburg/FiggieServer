@@ -1,22 +1,36 @@
-version: "3.8"
-
 services:
+  db:
+    image: postgres:15
+    container_name: figgie-db
+    environment:
+      - POSTGRES_DB=figgie
+      - POSTGRES_USER=figgie
+      - POSTGRES_PASSWORD=secret_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
   figgie-server:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: figgie-server
+    depends_on:
+      - db
     ports:
       - "8000:5000"
     environment:
       - PORT=5000
       - NUM_PLAYERS=4
       - TRADING_DURATION=60
-      - DB_PATH=/data/figgie.db  # path for SQLite DB file
-    volumes:
-      - sqlite_data:/data        # persistent storage for SQLite
+      - DB_HOST=db
+      - DB_NAME=figgie
+      - DB_USER=figgie
+      - DB_PASSWORD=secret_password
     restart: unless-stopped
 
 volumes:
-  sqlite_data:
+  pgdata:
     driver: local

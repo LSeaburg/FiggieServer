@@ -175,7 +175,7 @@ class Game:
 
     def place_order(self, pid: str, otype: str, suit: str, price: int) -> Tuple[dict, Optional[str]]:
         # validation
-        if (time_remaining := self._compute_or_finalize_time() == 0):
+        if (time_remaining := self._compute_or_finalize_time()) == 0:
             return None, "Round has ended"
         if otype not in ("buy", "sell"): 
             return None, "Invalid order_type"
@@ -254,7 +254,7 @@ class Game:
         Returns a dict with canceled order IDs, or an error message.
         """
         # validation
-        if (time_remaining := self._compute_or_finalize_time() == 0):
+        if (time_remaining := self._compute_or_finalize_time()) == 0:
             return None, "Round has ended"
         if otype not in ("buy", "sell", "both"): 
             return None, "Invalid order_type"

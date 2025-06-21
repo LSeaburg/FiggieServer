@@ -4,7 +4,7 @@ FROM python:3.13-alpine
 # Set work directory
 WORKDIR /app
 
-RUN pip install --no-cache-dir flask
+RUN pip install --no-cache-dir flask psycopg-binary psycopg
 
 # Copy application code
 COPY figgie_server ./figgie_server
