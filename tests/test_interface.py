@@ -84,7 +84,7 @@ class TestFiggieInterface(unittest.TestCase):
         s2 = State(state='trading', time_left=None, hand={'a':1}, market={}, trades=[])
         iface._last_state = s2_prev
         iface._process_state(s2)
-        start_fn.assert_called_once_with({'a':1})
+        start_fn.assert_called_once_with({'a':1}, set())
         # bid & offer
         bid_fn = MagicMock()
         offer_fn = MagicMock()

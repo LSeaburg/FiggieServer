@@ -9,11 +9,11 @@ from figgie_interface import FiggieInterface
 SUITS = ["spades", "clubs", "hearts", "diamonds"]
 
 
-def make_client(name, server_url="http://localhost:8000", polling_rate=1.0):
+def make_client(name, server_url="http://localhost:8000", polling_rate=0.1):
     fig = FiggieInterface(server_url, name=name, polling_rate=polling_rate)
 
     @fig.on_start
-    def on_start(hand):
+    def on_start(hand, other_players):
         print(f"[{name}] → Round started, my hand: {hand}")
 
     @fig.on_tick
@@ -84,7 +84,7 @@ def main():
             # Check for round completion
             completed_client = next(
                 (c for c in clients if c._last_state and c._last_state.state == "completed"),
-                None,
+                None
             )
             if not completed_client:
                 continue

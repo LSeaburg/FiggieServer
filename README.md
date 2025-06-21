@@ -203,7 +203,7 @@ def main():
 
     # Called once when trading starts, providing your initial hand
     @interface.on_start
-    def handle_start(hand):
+    def handle_start(hand: Dict[str, int], opponents: Set[str]):
         print("Game started. Your hand:", hand)
 
         # Example: place an initial bid of 10 on spades
@@ -211,30 +211,32 @@ def main():
 
     # Called on every tick (every polling interval) with seconds left
     @interface.on_tick
-    def handle_tick(time_left):
+    def handle_tick(time_left: int):
         print(f"Time left: {time_left}s")
         # e.g., adjust strategy or cancel/modify orders
 
     # Called when any player places a new highest bid
+    # Not called when you placed the bid
     @interface.on_bid
-    def handle_bid(player_id, price, suit):
+    def handle_bid(player_id: str, price: int, suit: str):
         print(f"New highest bid by {player_id}: {price} on {suit}")
 
     # Called when any player places a new lowest ask
+    # Not called when you placed the ask
     @interface.on_offer
-    def handle_offer(player_id, price, suit):
+    def handle_offer(player_id: str, price: int, suit: str):
         print(f"New best offer by {player_id}: {price} on {suit}")
 
     # Called when an order is canceled or replaced
     @interface.on_cancel
-    def handle_cancel(order_type, old_pid, old_price, new_pid, new_price, suit):
+    def handle_cancel(order_type: str, old_pid: str, old_price: int, new_pid: str, new_price: int, suit: str):
         print(
             f"Order canceled: {order_type} {old_pid}@{old_price} replaced by {new_pid}@{new_price} on {suit}"
         )
 
     # Called on completed trades
     @interface.on_transaction
-    def handle_transaction(buyer, seller, price, suit):
+    def handle_transaction(buyer: str, seller: str, price: int, suit: str):
         print(
             f"Trade executed: {buyer} bought from {seller} at {price} on {suit}"
         )
@@ -260,8 +262,8 @@ if __name__ == "__main__":
 - `interface.cancel_bids_and_offers(suit: str)`: Cancel all your orders for a given suit.
 
 **Event hooks**:
-- `on_start(fn: Dict[str, Any] → None)`: Fired once when trading begins, with your initial hand.
-- `on_tick(fn: float → None)`: Fired every polling cycle with remaining time (seconds).
+- `on_start(fn: Dict[str, Any], Set[str] → None)`: Fired once when trading begins, with your initial hand.
+- `on_tick(fn: int → None)`: Fired every polling cycle with remaining time (seconds).
 - `on_bid(fn: str, int, str → None)`: Fired on new highest bids by any player.
 - `on_offer(fn: str, int, str → None)`: Fired on new lowest asks by any player.
 - `on_cancel(fn: str, Optional[str], int, Optional[str], Optional[int], str → None)`: Fired when orders are canceled or outbid.

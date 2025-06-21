@@ -4,7 +4,7 @@ import time
 import threading
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Set
 
 import requests
 
@@ -15,7 +15,7 @@ class State:
     Represents the full game state returned by the Figgie server.
     """
     state: Optional[str]
-    time_left: Optional[float]
+    time_left: Optional[int]
     pot: Optional[int] = None
     hand: Optional[Dict[str, Any]] = None
     market: Dict[str, Any] = field(default_factory=dict)
@@ -50,8 +50,8 @@ HandlerBid = Callable[[str, int, str], None]
 HandlerOffer = Callable[[str, int, str], None]
 HandlerTransaction = Callable[[str, str, int, str], None]
 HandlerCancel = Callable[[str, Optional[str], int, Optional[str], Optional[int], str], None]
-HandlerStart = Callable[[Dict[str, Any]], None]
-HandlerTick = Callable[[float], None]
+HandlerStart = Callable[[Dict[str, Any], Set[str]], None]
+HandlerTick = Callable[[int], None]
 
 class FiggieInterface:
     def __init__(
@@ -169,7 +169,7 @@ class FiggieInterface:
             if state.hand is not None:
                 for fn in set(self._handlers["start"]):
                     try:
-                        fn(state.hand)  # type: ignore
+                        fn(state.hand, set(state.balances.keys()) - {self.player_id})  # type: ignore
                     except Exception:
                         logging.exception("on_start error")
 

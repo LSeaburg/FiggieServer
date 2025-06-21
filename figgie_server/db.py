@@ -159,7 +159,9 @@ def log_round_end(round_id: str, results: dict, initial_balances: dict, final_ba
         )
         # Store results and state snapshots as JSON
         conn.execute(
-            'INSERT OR REPLACE INTO results(round_id, results, initial_balances, final_balances, initial_hands, final_hands, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            '''INSERT OR REPLACE INTO results
+                (round_id, results, initial_balances, final_balances, initial_hands, final_hands, timestamp) 
+               VALUES (?, ?, ?, ?, ?, ?, ?)''',
             (
                 round_id,
                 json.dumps(results),
