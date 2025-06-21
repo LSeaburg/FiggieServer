@@ -5,8 +5,8 @@ This project implements a server for running rounds of the Figgie game. It provi
 Official implementation: https://www.figgie.com
 
 ## Requirements
-Python 3.13
-Docker 27.5
+- Python 3.13
+- Docker 27.5
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@ Docker 27.5
 - [Error Handling](#error-handling)
 - [Creating Your Agent](#creating-your-agent)
 - [Differences from Official Implementation](#differences-from-official-implementation)
-- [Future Roadmap](#future-roadmap)
+- [Roadmap](#roadmap)
 
 ## Getting Started
 
@@ -42,7 +42,7 @@ Docker 27.5
   pip install -r requirements-dev.txt
   ```
 
-4. Run the server:
+4. Run the server and database (database is for logging):
   ```shell
   docker compose up --build -d
   ```
@@ -56,9 +56,9 @@ Docker 27.5
 
 You can run code coverage with:
 ```shell
-coverage run -m pytest
-coverage report -m
-coverage html
+python -m coverage run -m pytest
+python -m coverage report -m
+python -m coverage html
 ```
 
 ## Environment Variables
@@ -277,7 +277,7 @@ While it wouldn't be difficult to bring the behavior of this server closer in li
 
 For example, none of the official Jane Street bots cancel orders. The few times I have seen players on Figgie.com cancel orders were in matches against bots that were using order cancellation as a form of abuse.
 
-## Future Roadmap
+## Roadmap
 
 This project is under active development.
 
