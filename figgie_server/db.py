@@ -48,6 +48,8 @@ def init_db():
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS rounds(
                 round_id TEXT PRIMARY KEY,
+                num_players INTEGER,
+                round_duration INTEGER,
                 start_time TIMESTAMP WITH TIME ZONE,
                 end_time TIMESTAMP WITH TIME ZONE
             );
@@ -96,18 +98,28 @@ def log_player(player_id: str, name: str):
     with _db_lock:
         cursor = conn.cursor()
         cursor.execute(
-            'INSERT INTO players(player_id, name, joined_at) VALUES (%s, %s, %s) ON CONFLICT (player_id) DO NOTHING',
+            '''INSERT INTO players(player_id, name, joined_at) 
+               VALUES (%s, %s, %s) 
+               ON CONFLICT (player_id) DO NOTHING''',
             (player_id, name, datetime.now(timezone.utc))
         )
         conn.commit()
 
-def log_round_start(round_id: str):
+def log_round_start(round_id: str, num_players: int, round_duration: int):
     conn = get_connection()
     with _db_lock:
         cursor = conn.cursor()
         cursor.execute(
-            'INSERT INTO rounds(round_id, start_time) VALUES (%s, %s) ON CONFLICT (round_id) DO UPDATE SET start_time = EXCLUDED.start_time',
-            (round_id, datetime.now(timezone.utc))
+            '''INSERT INTO rounds
+               (round_id, num_players, round_duration, start_time)
+               VALUES (%s, %s, %s, %s) 
+               ON CONFLICT (round_id) 
+               DO UPDATE 
+                 SET start_time = EXCLUDED.start_time,
+                     num_players = EXCLUDED.num_players,
+                     round_duration = EXCLUDED.round_duration
+            ''',
+            (round_id, num_players, round_duration, datetime.now(timezone.utc))
         )
         conn.commit()
 
@@ -117,7 +129,7 @@ def log_order(round_id: str, order, time_remaining: int):
         cursor = conn.cursor()
         cursor.execute(
             '''INSERT INTO actions
-                (action_type, round_id, order_id, player_id, order_type, suit, price, time_remaining, timestamp)
+               (action_type, round_id, order_id, player_id, order_type, suit, price, time_remaining, timestamp)
                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)''',
             ('order', round_id, order.order_id, order.player_id, order.type,
              order.suit, order.price, time_remaining, datetime.now(timezone.utc))
@@ -130,7 +142,7 @@ def log_cancellation(round_id: str, order, time_remaining: int):
         cursor = conn.cursor()
         cursor.execute(
             '''INSERT INTO actions
-                (action_type, round_id, order_id, player_id, order_type, suit, price, time_remaining, timestamp)
+               (action_type, round_id, order_id, player_id, order_type, suit, price, time_remaining, timestamp)
                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)''',
             ('cancellation', round_id, order.order_id, order.player_id, order.type,
              order.suit, order.price, time_remaining, datetime.now(timezone.utc))
@@ -143,7 +155,7 @@ def log_trade(round_id: str, trade, time_remaining: int):
         cursor = conn.cursor()
         cursor.execute(
             '''INSERT INTO trades
-                (round_id, buyer, seller, suit, price, time_remaining, timestamp)
+               (round_id, buyer, seller, suit, price, time_remaining, timestamp)
                VALUES (%s, %s, %s, %s, %s, %s, %s)''',
             (round_id, trade.buyer, trade.seller, trade.suit,
              trade.price, time_remaining, datetime.now(timezone.utc))
@@ -160,7 +172,7 @@ def log_round_end(round_id: str, results: dict, initial_balances: dict, final_ba
         )
         cursor.execute(
             '''INSERT INTO results
-                (round_id, results, initial_balances, final_balances, initial_hands, final_hands, timestamp) 
+               (round_id, results, initial_balances, final_balances, initial_hands, final_hands, timestamp) 
                VALUES (%s, %s, %s, %s, %s, %s, %s)
                ON CONFLICT (round_id) DO UPDATE
                  SET results = EXCLUDED.results,

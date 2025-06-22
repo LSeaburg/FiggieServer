@@ -65,7 +65,7 @@ class Game:
         self.results: Optional[dict] = None
         # generate a new round ID
         self.round_id = uuid.uuid4().hex
-        db.log_round_start(self.round_id)
+        db.log_round_start(self.round_id, NUM_PLAYERS, TRADING_DURATION)
         logger.info("Game state has been reset.")
 
     def add_player(self, name: str) -> str:
