@@ -30,8 +30,6 @@ SUIT_COLORS = {
 
 class Game:
     def __init__(self) -> None:
-        # Initialize database
-        db.init_db()
         self.round_id = None
         self.reset()
         logger.info("Initialized new Game instance.")
