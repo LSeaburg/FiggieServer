@@ -13,4 +13,4 @@ COPY figgie_server ./figgie_server
 EXPOSE 8000
 
 # Run the server
-CMD ["python", "-m", "figgie_server.api"]
+CMD ["python", "-m", "figgie_server.wsgi"]

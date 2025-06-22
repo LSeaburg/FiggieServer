@@ -8,3 +8,5 @@ services:
     ports:
       - "5433:5432"
     restart: "no"
+    tmpfs:
+      - /var/lib/postgresql/data

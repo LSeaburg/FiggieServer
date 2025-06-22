@@ -9,9 +9,10 @@ class TestAppEndpoints(unittest.TestCase):
     def setUp(self):
         self.app_module = api_mod
         self.app = api_mod.app
-        self.game = api_mod.game
+        self.game = game_mod.Game()
+        api_mod.game = self.game
+        self.app.game = self.game
         self.client = self.app.test_client()
-        # Reset game state
         self.game.reset()
     
     def _join_all_players(self):
