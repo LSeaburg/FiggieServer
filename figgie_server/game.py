@@ -63,7 +63,6 @@ class Game:
         self.results: Optional[dict] = None
         # generate a new round ID
         self.round_id = uuid.uuid4().hex
-        db.log_round_start(self.round_id, NUM_PLAYERS, TRADING_DURATION)
         logger.info("Game state has been reset.")
 
     def add_player(self, name: str) -> str:
@@ -82,6 +81,7 @@ class Game:
         counts = random.sample([8, 10, 10, 12], 4)
         self.suit_counts = dict(zip(SUITS, counts))
         twelve = next(s for s, c in self.suit_counts.items() if c == 12)
+        eight  = next(s for s, c in self.suit_counts.items() if c == 8)
         col12 = SUIT_COLORS[twelve]
         self.goal_suit = next(s for s in SUITS if s != twelve and SUIT_COLORS[s] == col12)
         logger.info(f"Suit counts: {self.suit_counts}, goal: {self.goal_suit}")
@@ -116,6 +116,8 @@ class Game:
         self.state = "trading"
         self.start_time = datetime.now().timestamp()
         logger.info("Round state changed to 'trading'.")
+        
+        db.log_round_start(self.round_id, NUM_PLAYERS, TRADING_DURATION, self.goal_suit, eight)
 
     def end_round(self) -> None:
         logger.info(f"Ending round. Goal suit: {self.goal_suit}")
