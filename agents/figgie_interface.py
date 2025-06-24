@@ -1,5 +1,3 @@
-# figgie_interface.py
-
 import time
 import threading
 import logging
@@ -7,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Set
 
 import requests
+import random
 
 # ---- Data models ----
 @dataclass
@@ -58,7 +57,8 @@ class FiggieInterface:
         self,
         server_url: str,
         name: str,
-        polling_rate: float = 1.0
+        polling_rate: float = 1.0,
+        jitter_factor: float = 0.1
     ) -> None:
         """
         Initialize the Figgie client interface.
@@ -70,6 +70,7 @@ class FiggieInterface:
         self.server_url: str = server_url.rstrip("/")
         self.name: str = name
         self.polling_rate: float = polling_rate
+        self.jitter_factor: float = jitter_factor
         self.player_id: Optional[str] = None
 
         # Event handlers
@@ -125,7 +126,10 @@ class FiggieInterface:
                 self._process_state(state)
             except Exception:
                 logging.exception("Error polling Figgie state")
-            time.sleep(self.polling_rate)
+            # apply uniform jitter around polling_rate
+            jitter = random.uniform(-self.jitter_factor, self.jitter_factor) * self.polling_rate
+            sleep_time = max(self.polling_rate + jitter, 0.0)
+            time.sleep(sleep_time)
 
     def _get_state(self) -> State:
         """Fetch and parse the latest game state for this player."""

@@ -1,7 +1,8 @@
 flask
-requests
 psycopg
 psycopg-binary
+numpy
+requests
 coverage
 pytest
 pytest-docker
