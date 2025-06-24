@@ -252,20 +252,20 @@ if __name__ == "__main__":
 - `interface.cancel_bids_and_offers(suit: str)`: Cancel all your orders for a given suit.
 
 **Event hooks**:
-- `on_start(fn: Dict[str, Any], Set[str] → None)`: Fired once when trading begins, with your initial hand.
-- `on_tick(fn: int → None)`: Fired every polling cycle with remaining time (seconds).
-- `on_bid(fn: str, int, str → None)`: Fired on new highest bids by any player.
-- `on_offer(fn: str, int, str → None)`: Fired on new lowest asks by any player.
-- `on_cancel(fn: str, Optional[str], int, Optional[str], Optional[int], str → None)`: Fired when orders are canceled or outbid.
-- `on_transaction(fn: str, str, int, str → None)`: Fired on each completed trade.
+- `on_start(hand: Dict[str, Any], opponent_ids: Set[str] → None)`: Fired once when trading begins, with your initial hand and polling ids.
+- `on_tick(remaining_time: int → None)`: Fired every polling cycle with remaining time (seconds).
+- `on_bid(player_id: str, price: int, suit: str → None)`: Fired on new highest bids by any player.
+- `on_offer(player_id: str, price: int, suit: str → None)`: Fired on new lowest asks by any player.
+- `on_cancel(order_type: str, old_pid: str, old_price: int, new_pid: Optional[str], new_price: Optional[int], suit: str → None)`: Fired when orders are canceled or outbid.
+- `on_transaction(buyer_id: str, seller_id: str, price: int, suit: str → None)`: Fired on each completed trade.
 
 ## Differences from Official Implementation
 
 This project has several intentional differences when compared to the official implementation.
 
-1. You are sucessfully able to place orders that are worse than or equal to the the current best order (bids that are lower than the current bid, asks higher than the current ask). Placing orders first gives priority, so this change will only make a material difference when orders are cancelled (these orders are not broadcast until the current order is cancelled).
+1. You can successfully place orders that are worse than or equal to the current best order (bids that are lower than the current bid, asks higher than the current ask). Placing orders first gives priority, so this change will only make a material difference when orders are cancelled (these orders are not broadcast until the current order is cancelled).
 
-2. In the official implementation, a person that places a bid and an ask on a suit that would result in a strike would effectively cancel all bids and asks on said suit. In this implementation, attempting to place an order that would result in a strike with oneself return a 400 error. 
+2. In the official implementation, a person that places a bid and an ask on a suit that would result in a strike would effectively cancel all bids and asks on said suit. In this implementation, attempting to place an order that would result in a strike with oneself returns a 400 error.
 
 3. Clients are given more control over order cancellation. Instead of having to cancel all orders of a specific type, clients can choose to only cancel orders of specific amounts. 
 
@@ -289,7 +289,7 @@ There are several improvements that could be made to the server. To name a few:
 
 3. Allowing player number and round duration to be configured on a per-room basis.
 
-4. Allowing persisting rooms where the reamaining balances from one round carry to the next.
+4. Allowing persisting rooms where the remaining balances from one round carry to the next.
 
 5. Securing calls to prevent other actors from getting info on an opponent's hand of cards with just a player id.
 

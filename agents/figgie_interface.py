@@ -48,7 +48,7 @@ class Trade:
 HandlerBid = Callable[[str, int, str], None]
 HandlerOffer = Callable[[str, int, str], None]
 HandlerTransaction = Callable[[str, str, int, str], None]
-HandlerCancel = Callable[[str, Optional[str], int, Optional[str], Optional[int], str], None]
+HandlerCancel = Callable[[str, str, int, Optional[str], Optional[int], str], None]
 HandlerStart = Callable[[Dict[str, Any], Set[str]], None]
 HandlerTick = Callable[[int], None]
 
