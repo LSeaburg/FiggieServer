@@ -29,6 +29,14 @@ def test_make_agent_class(monkeypatch):
     assert isinstance(inst, DummyAgent)
     assert inst.foo == 42
 
+def test_make_agent_factory_kw(monkeypatch):
+    mod = types.SimpleNamespace(my_factory=dummy_factory_kw)
+    monkeypatch.setattr(importlib, "import_module", lambda path: mod)
+    entry = ("dummy_module", "my_factory", {"foo": 7})
+    inst = dispatcher.make_agent(entry, "Y", "http://u", 0.2)
+    assert isinstance(inst, DummyAgent)
+    assert inst.foo == 7
+
 def test_make_agent_factory_pos_fallback(monkeypatch):
     # Test fallback for a factory that only accepts positional args
     mod = types.SimpleNamespace(pos_factory=dummy_factory_pos)

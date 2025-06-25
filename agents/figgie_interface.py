@@ -66,6 +66,7 @@ class FiggieInterface:
             server_url: Base URL of the Figgie Flask app.
             name: Player name.
             polling_rate: Seconds between polling cycles.
+            jitter_factor: Amount of jitter to shift polling rate.
         """
         self.server_url: str = server_url.rstrip("/")
         self.name: str = name

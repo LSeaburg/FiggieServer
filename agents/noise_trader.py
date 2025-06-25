@@ -42,7 +42,7 @@ class NoiseTrader(FiggieInterface):
             exp_val = self.default_val if high_bid is None else self._add_noise(high_bid, self.sigma)
 
             if order == "buy":
-                p = random.randint(0, exp_val)
+                p = random.randint(1, exp_val)
                 price = p if low_ask is None else min(p, low_ask)
                 operation = self.bid
                 print(f"{self.player_id}: Making bid with price {price} and suit {suit}")
