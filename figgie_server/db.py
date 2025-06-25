@@ -83,6 +83,17 @@ def init_db():
             );
         ''')
         cursor.execute('''
+            CREATE TABLE IF NOT EXISTS agents(
+                id SERIAL PRIMARY KEY,
+                player_id TEXT UNIQUE,
+                module_name TEXT,
+                attr_name TEXT,
+                extra_kwargs JSONB,
+                polling_rate REAL,
+                created_at TIMESTAMP WITH TIME ZONE
+            );
+        ''')
+        cursor.execute('''
             CREATE TABLE IF NOT EXISTS results(
                 round_id         TEXT    NOT NULL,
                 player_id        TEXT    NOT NULL,
@@ -225,4 +236,17 @@ def log_round_end(round_id: str, results: dict, initial_balances: dict, final_ba
                     results.get('share_each', 0)
                 )
             )
+        conn.commit()
+
+def log_agent(player_id: str, module_name: str, attr_name: str, extra_kwargs: dict, polling_rate: float):
+    conn = get_connection()
+    with _db_lock:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO agents (player_id, module_name, attr_name, extra_kwargs, polling_rate, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (player_id) DO NOTHING
+        ''',
+        (player_id, module_name, attr_name, json.dumps(extra_kwargs), polling_rate, datetime.now(timezone.utc))
+        )
         conn.commit()
