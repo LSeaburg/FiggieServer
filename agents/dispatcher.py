@@ -12,10 +12,10 @@ import figgie_server.db as db
 # attribute_name is the class name (subclass of FiggieInterface) or factory function name.
 # extra_kwargs is a dict of additional parameters for that agent (empty if none).
 AGENTS: List[Tuple[str, str, Dict[str, Any]]] = [
-    ("noise_trader", "NoiseTrader", {"aggression": 0.8, "default_val": 7}),
-    ("noise_trader", "NoiseTrader", {"aggression": 0.6, "default_val": 10}),
-    ("noise_trader", "NoiseTrader", {"aggression": 0.5, "default_val": 11}),
-    ("noise_trader", "NoiseTrader", {"aggression": 0.4, "default_val": 15})
+    ("fundamentalist", "Fundamentalist", {"aggression": 0.8, "buy_ratio": 1.7}),
+    ("fundamentalist", "Fundamentalist", {"aggression": 0.6, "buy_ratio": 1.6}),
+    ("noise_trader", "NoiseTrader", {"aggression": 0.6, "default_val": 7}),
+    ("noise_trader", "NoiseTrader", {"aggression": 0.4, "default_val": 9})
 ]
 
 def make_agent(
