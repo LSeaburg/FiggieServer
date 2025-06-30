@@ -45,7 +45,7 @@ class Fundamentalist(FiggieInterface):
             name: Unique name for this agent.
             polling_rate: Seconds between polling cycles.
             aggression: Probability [0,1] of acting on each tick.
-            buy_ratio: Parameter controlling bidding aggressiveness.
+            buy_ratio: Parameter controlling bidding aggressiveness.  Should be greater than 1.
         """
         super().__init__(server_url, name, polling_rate)
         self.aggression: float = aggression
