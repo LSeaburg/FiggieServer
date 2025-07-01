@@ -18,7 +18,7 @@ AGENTS: List[Tuple[str, str, Dict[str, Any]]] = [
     ("fundamentalist", "Fundamentalist", {"aggression": 0.8, "buy_ratio": 1.7}),
     ("fundamentalist", "Fundamentalist", {"aggression": 0.6, "buy_ratio": 1.6}),
     ("noise_trader", "NoiseTrader", {"aggression": 0.6, "default_val": 7}),
-    ("noise_trader", "NoiseTrader", {"aggression": 0.4, "default_val": 9})
+    ("bottom_feeder", "BottomFeeder", {"aggression": 0.4, "look_depth": 4})
 ]
 
 def make_agent(
