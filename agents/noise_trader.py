@@ -26,11 +26,11 @@ class NoiseTrader(FiggieInterface):
         name: str,
         polling_rate: float = 1.0,
         aggression: float = 0.5,
-        default_val: float = 7,
+        default_val: int = 7,
         sigma: float = 1.0
     ) -> None:
         """
-        Initialize the Fundamentalist agent.
+        Initialize the Noise Trader agent.
 
         Args:
             server_url: URL of the Figgie server.
@@ -59,37 +59,41 @@ class NoiseTrader(FiggieInterface):
         Z = np.random.normal(loc=0, scale=sigma)
         return max(round(n * np.exp(Z)), 1)
 
+    def _get_exp_val(self, best_bid: Optional[int]) -> Optional[int]:
+        if best_bid is None:
+            return self.default_val
+        return self._add_noise(best_bid, self.sigma)
+
     def _handle_tick(self, _) -> None:
         """
         Called every polling cycle of the market.
 
         May issue a buy or sell order based on aggression.
         """
-        if random.random() < self.aggression:
-            order = random.choice(["buy", "sell"])
-            suit = random.choice(SUITS)
-
-            low_ask = self.market[suit].lowest_ask
-            high_bid = self.market[suit].highest_bid
-
-            exp_val = self.default_val if high_bid is None else self._add_noise(high_bid, self.sigma)
-
-            if order == "buy":
-                p = random.randint(1, exp_val)
-                price = p if low_ask is None else min(p, low_ask)
-                operation = self.bid
-                self.market[suit].highest_bid = price
-            else: # order == "sell"
-                p = random.randint(exp_val, 2 * exp_val)
-                price = p if high_bid is None else max(p, high_bid)
-                operation = self.offer
-                self.market[suit].lowest_ask = price
-            
-            print(f"{self.player_id}: Send {order} order with price {price} and suit {suit}")
-            try:
-                operation(price, suit)
-            except requests.HTTPError as e:
-                print(f"Failed: {e.response.status_code} {e.response.text}")
+        if random.random() >= self.aggression:
+            return
+        action = random.choice(['buy', 'sell'])
+        suit = random.choice(SUITS)
+        best_ask = self.market[suit].lowest_ask
+        best_bid = self.market[suit].highest_bid
+        exp_val = self._get_exp_val(best_bid)
+        if action == 'buy':
+            bid_price = random.randint(1, exp_val)
+            price = min(bid_price, best_ask) if best_ask is not None else bid_price
+            self.market[suit].highest_bid = price
+            op = self.bid
+        else:
+            ask_price = random.randint(exp_val, 2 * exp_val)
+            price = max(ask_price, best_bid) if best_bid is not None else ask_price
+            self.market[suit].lowest_ask = price
+            op = self.offer
+        
+        print(f"{self.player_id}: Send {action} order for {suit} at {price}")
+        try:
+            op(price, suit)
+        except requests.HTTPError as e:
+            # Log failure to execute order
+            print(f"Order failed ({action} {suit} at {price}): {e.response.text}")
 
     def _handle_bid(self, _, price: int, suit: str) -> None:
         self.market[suit].highest_bid = price
