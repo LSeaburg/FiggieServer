@@ -65,8 +65,7 @@ class Fundamentalist(FiggieInterface):
         self.multinomials: Dict[tuple, float] = {}
 
         # Register event handlers
-        # The tick handler will be registered once trading starts
-        # self.on_tick(self._handle_tick)
+        self.on_tick(self._handle_tick)
         self.on_start(self._handle_start)
         self.on_bid(self._handle_bid)
         self.on_offer(self._handle_offer)
@@ -175,9 +174,6 @@ class Fundamentalist(FiggieInterface):
         self.hand = hand.copy()
 
         self._update_multinomials()
-        
-        # Begin tick events
-        self.on_tick(self._handle_tick)
 
     def _handle_tick(self, _) -> None:
         """
@@ -205,7 +201,7 @@ class Fundamentalist(FiggieInterface):
             price = max(ask_price, best_bid) if best_bid is not None else ask_price
             self.market[suit].lowest_ask = price
             op = self.offer
-            
+
         print(f"{self.player_id}: Send {action} order for {suit} at {price}")
         try:
             op(price, suit)

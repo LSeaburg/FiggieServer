@@ -160,15 +160,8 @@ class FiggieInterface:
         Args:
             state: The latest parsed State object from the server.
         """
-        # 1) on_tick events
-        if state.time_left is not None:
-            for fn in set(self._handlers["tick"]):
-                try:
-                    fn(state.time_left)  # type: ignore
-                except Exception:
-                    logging.exception("on_tick error")
 
-        # 2) on_start: first transition to trading
+        # 1) on_start: first transition to trading
         prev_phase = self._last_state.state if self._last_state else None
         if state.state == "trading" and prev_phase != "trading":
             if state.hand is not None:
@@ -178,7 +171,7 @@ class FiggieInterface:
                     except Exception:
                         logging.exception("on_start error")
 
-        # 3) new trades -> on_transaction
+        # 2) new trades -> on_transaction
         new_trades = state.trades[self._last_trade_index:]
         if new_trades:
             # Reset last state to prevent ghost cancellations
@@ -192,7 +185,7 @@ class FiggieInterface:
                         logging.exception("on_transaction error")
         self._last_trade_index = len(state.trades)
 
-        # 4) market quote changes -> on_bid, on_offer, on_cancel
+        # 3) market quote changes -> on_bid, on_offer, on_cancel
         prev_market = self._last_state.market if self._last_state else {}
         curr_market = state.market
         suits = set(prev_market.keys()) | set(curr_market.keys())
@@ -240,6 +233,14 @@ class FiggieInterface:
                         fn("offer", old_pid, old_price, new_pid, new_price, suit)  # type: ignore
                     except Exception:
                         logging.exception("on_cancel error")
+
+        # 4) on_tick events
+        if state.time_left is not None:
+            for fn in set(self._handlers["tick"]):
+                try:
+                    fn(state.time_left)  # type: ignore
+                except Exception:
+                    logging.exception("on_tick error")
 
         # Stash state for next diff
         self._last_state = state

@@ -80,8 +80,7 @@ class BottomFeeder(FiggieInterface):
         self.history: Dict[str, History] = dict()
 
         # Register event handlers
-        # The tick handler will be registered once trading starts
-        # self.on_tick(self._handle_tick)
+        self.on_tick(self._handle_tick)
         self.on_start(self._handle_start)
         self.on_bid(self._handle_bid)
         self.on_offer(self._handle_offer)
@@ -122,9 +121,6 @@ class BottomFeeder(FiggieInterface):
         
         all_players = opponents | {self.player_id}
         self.history = {p: History() for p in all_players}
-
-        # Begin tick events
-        self.on_tick(self._handle_tick)
 
     def _handle_tick(self, _) -> None:
         """
