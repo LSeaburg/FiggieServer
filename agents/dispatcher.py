@@ -33,7 +33,7 @@ def make_agent(
     """
     module_name, attr_name, extra_kwargs = entry
 
-    module = importlib.import_module(f"agents.{module_name}")
+    module = importlib.import_module(f"agents.traders.{module_name}")
     factory = getattr(module, attr_name)
 
     # Base init kwargs
