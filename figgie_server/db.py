@@ -135,13 +135,7 @@ def log_round_start(round_id: str, num_players: int, round_duration: int, goal_s
             INSERT INTO rounds
             (round_id, num_players, round_duration, goal_suit, small_suit, start_time)
             VALUES (%s, %s, %s, %s, %s, %s) 
-            ON CONFLICT (round_id) 
-            DO UPDATE 
-                SET start_time = EXCLUDED.start_time,
-                    num_players = EXCLUDED.num_players,
-                    round_duration = EXCLUDED.round_duration,
-                    goal_suit = EXCLUDED.goal_suit,
-                    small_suit = EXCLUDED.small_suit
+            ON CONFLICT (round_id) DO NOTHING
             ''',
             (round_id, num_players, round_duration, goal_suit, small_suit, datetime.now(timezone.utc))
         )
@@ -209,20 +203,7 @@ def log_round_end(round_id: str, results: dict, initial_balances: dict, final_ba
                             %s, %s, %s, %s,
                             %s, %s, %s, %s,
                             %s, %s, %s)
-                ON CONFLICT (round_id, player_id) DO UPDATE SET
-                    initial_balance = EXCLUDED.initial_balance,
-                    final_balance   = EXCLUDED.final_balance,
-                    initial_spades  = EXCLUDED.initial_spades,
-                    initial_clubs   = EXCLUDED.initial_clubs,
-                    initial_hearts  = EXCLUDED.initial_hearts,
-                    initial_diamonds= EXCLUDED.initial_diamonds,
-                    final_spades    = EXCLUDED.final_spades,
-                    final_clubs     = EXCLUDED.final_clubs,
-                    final_hearts    = EXCLUDED.final_hearts,
-                    final_diamonds  = EXCLUDED.final_diamonds,
-                    bonus           = EXCLUDED.bonus,
-                    is_winner       = EXCLUDED.is_winner,
-                    share_each      = EXCLUDED.share_each
+                ON CONFLICT (round_id, player_id) DO NOTHING
                 ''',
                 (
                     round_id, pid,
