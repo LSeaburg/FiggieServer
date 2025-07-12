@@ -116,10 +116,12 @@ class Game:
         self.state = "trading"
         self.start_time = datetime.now().timestamp()
         logger.info("Round state changed to 'trading'.")
-        
+
         db.log_round_start(self.round_id, NUM_PLAYERS, TRADING_DURATION, self.goal_suit, eight)
 
     def end_round(self) -> None:
+        if self.state == "completed":
+            return
         logger.info(f"Ending round. Goal suit: {self.goal_suit}")
         goal = self.goal_suit
         counts = {pid: p.hand.get(goal, 0) for pid, p in self.players.items()}
