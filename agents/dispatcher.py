@@ -11,7 +11,7 @@ from agents.figgie_interface import FiggieInterface
 import figgie_server.db as db
 
 # Configuration: list of (module_name, attribute_name, extra_kwargs)
-# module_name is the Python module (without .py) in this folder.
+# module_name is the Python module (without .py) in the traders folder.
 # attribute_name is the class name (subclass of FiggieInterface) or factory function name.
 # extra_kwargs is a dict of additional parameters for that agent (empty if none).
 AGENTS: List[Tuple[str, str, Dict[str, Any]]] = [

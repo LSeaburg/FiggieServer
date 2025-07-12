@@ -54,9 +54,9 @@ Official Figgie implementation: https://www.figgie.com
    docker compose up --build -d
    ```
 
-5. Run sample agents
+5. Run a game with agents
    ```shell
-   python agents/random_agents.py
+   python agents/dispatcher.py
    ```
 
 ---

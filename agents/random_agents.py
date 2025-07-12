@@ -8,6 +8,11 @@ from figgie_interface import FiggieInterface
 
 SUITS = ["spades", "clubs", "hearts", "diamonds"]
 
+# This file launches 4 agents that perform random actions, including bids, offers,
+# and cancellations.  This should be mainly used as a reference for how to program 
+# actions.
+# For more control over agent behavior and for an easier deployment framework see
+# the system layed out in dispatcher.py.
 
 def make_client(name, server_url="http://localhost:8000", polling_rate=0.1):
     fig = FiggieInterface(server_url, name=name, polling_rate=polling_rate)
