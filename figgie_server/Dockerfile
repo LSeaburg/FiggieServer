@@ -10,7 +10,7 @@ RUN pip install --no-cache-dir flask psycopg-binary psycopg
 COPY figgie_server ./figgie_server
 
 # Expose port
-EXPOSE 8000
+EXPOSE 5000
 
 # Run the server
 CMD ["python", "-m", "figgie_server.wsgi"]

@@ -4,13 +4,6 @@ import json
 from datetime import datetime, timezone
 import psycopg
 
-# Database connection parameters from environment
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_NAME = os.getenv("DB_NAME", "figgie")
-DB_USER = os.getenv("DB_USER", "figgie")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "secret_password")
-DB_PORT = os.getenv("DB_PORT", "5432")
-
 # Ensure thread-safe DB access
 _db_lock = threading.Lock()
 
@@ -20,11 +13,11 @@ _conn = None
 def get_connection():
     global _conn
     if _conn is None:
-        host = os.getenv("DB_HOST", "localhost")
+        host = os.getenv("POSTGRES_HOST", "localhost")
         port = int(os.getenv("DB_PORT", "5432"))
-        dbname = os.getenv("DB_NAME", "figgie")
-        user = os.getenv("DB_USER", "figgie")
-        password = os.getenv("DB_PASSWORD", "secret_password")
+        dbname = os.getenv("POSTGRES_DB", "figgie")
+        user = os.getenv("POSTGRES_USER", "figgie")
+        password = os.getenv("POSTGRES_PASSWORD", "secret_password")
         _conn = psycopg.connect(
             host=host,
             port=port,

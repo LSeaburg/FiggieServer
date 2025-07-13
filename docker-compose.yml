@@ -15,20 +15,19 @@ services:
   figgie-server:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: figgie_server/Dockerfile
     container_name: figgie-server
     depends_on:
       - db
     ports:
-      - "8000:5000"
+      - "5050:5000"
     environment:
-      - PORT=5000
       - NUM_PLAYERS=4
       - TRADING_DURATION=60
-      - DB_HOST=db
-      - DB_NAME=figgie
-      - DB_USER=figgie
-      - DB_PASSWORD=secret_password
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=figgie
+      - POSTGRES_USER=figgie
+      - POSTGRES_PASSWORD=secret_password
     restart: unless-stopped
 
 volumes:

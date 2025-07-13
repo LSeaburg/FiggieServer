@@ -62,7 +62,7 @@ def make_agent(
 
 def main():
     logging.basicConfig(level=logging.INFO)
-    server_url = os.getenv("SERVER_URL", "http://localhost:8000")
+    server_url = os.getenv("SERVER_URL", "http://localhost:5050")
     polling_rate = float(os.getenv("POLLING_RATE", "0.25"))
     num_players = int(os.getenv("NUM_PLAYERS", "4"))
 

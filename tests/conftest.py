@@ -47,11 +47,11 @@ def test_postgres_database(docker_services, docker_ip):
     )
 
     # Set environment variables for database connection
-    os.environ["DB_HOST"] = host
+    os.environ["POSTGRES_HOST"] = host
     os.environ["DB_PORT"] = str(port)
-    os.environ["DB_NAME"] = "figgie"
-    os.environ["DB_USER"] = "figgie"
-    os.environ["DB_PASSWORD"] = "secret_password"
+    os.environ["POSTGRES_DB"] = "figgie"
+    os.environ["POSTGRES_USER"] = "figgie"
+    os.environ["POSTGRES_PASSWORD"] = "secret_password"
 
     # Reset any existing singleton connection
     db._conn = None
