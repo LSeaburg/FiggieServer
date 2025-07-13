@@ -124,21 +124,22 @@ class Game:
             return
         logger.info(f"Ending round. Goal suit: {self.goal_suit}")
         goal = self.goal_suit
-        counts = {pid: p.hand.get(goal, 0) for pid, p in self.players.items()}
+        goal_suit_counts = {pid: p.hand.get(goal, 0) for pid, p in self.players.items()}
         total_bonus = 0
         bonuses = {}
-        for pid, cnt in counts.items():
+        for pid, cnt in goal_suit_counts.items():
             b = 10 * cnt
             self.players[pid].money += b
             bonuses[pid] = b
             total_bonus += b
         rem = self.pot - total_bonus
-        max_cnt = max(counts.values(), default=0)
-        winners = [pid for pid, cnt in counts.items() if cnt == max_cnt]
+        max_cnt = max(goal_suit_counts.values(), default=0)
+        winners = [pid for pid, cnt in goal_suit_counts.items() if cnt == max_cnt]
         share = rem // len(winners) if winners else 0
         for pid in winners:
             self.players[pid].money += share
-        self.results = {"goal_suit": goal, "counts": counts, "bonuses": bonuses,
+            bonuses[pid] += share
+        self.results = {"goal_suit": goal, "counts": goal_suit_counts, "bonuses": bonuses,
                         "winners": winners, "share_each": share}
         logger.info(f"Results computed: {self.results}")
         # log round end with snapshots

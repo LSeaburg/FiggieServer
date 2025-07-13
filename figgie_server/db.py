@@ -90,6 +90,7 @@ def init_db():
                 attr_name TEXT,
                 extra_kwargs JSONB,
                 polling_rate REAL,
+                experiment_id INTEGER NOT NULL DEFAULT 0,
                 created_at TIMESTAMP WITH TIME ZONE
             );
         ''')
@@ -219,15 +220,15 @@ def log_round_end(round_id: str, results: dict, initial_balances: dict, final_ba
             )
         conn.commit()
 
-def log_agent(player_id: str, module_name: str, attr_name: str, extra_kwargs: dict, polling_rate: float):
+def log_agent(player_id: str, module_name: str, attr_name: str, extra_kwargs: dict, polling_rate: float, experiment_id: int = 0):
     conn = get_connection()
     with _db_lock:
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO agents (player_id, module_name, attr_name, extra_kwargs, polling_rate, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO agents (player_id, module_name, attr_name, extra_kwargs, polling_rate, experiment_id, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (player_id) DO NOTHING
         ''',
-        (player_id, module_name, attr_name, json.dumps(extra_kwargs), polling_rate, datetime.now(timezone.utc))
+        (player_id, module_name, attr_name, json.dumps(extra_kwargs), polling_rate, experiment_id, datetime.now(timezone.utc))
         )
         conn.commit()
