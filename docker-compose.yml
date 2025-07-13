@@ -30,6 +30,22 @@ services:
       - POSTGRES_PASSWORD=secret_password
     restart: unless-stopped
 
+  figgie-dashboard:
+    build:
+      context: .
+      dockerfile: dashboard/Dockerfile
+    container_name: figgie-dashboard
+    depends_on:
+      - db
+    ports:
+      - "8050:8050"
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=figgie
+      - POSTGRES_USER=figgie
+      - POSTGRES_PASSWORD=secret_password
+    restart: unless-stopped
+
 volumes:
   pgdata:
     driver: local
