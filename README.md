@@ -74,7 +74,7 @@ services:
 ```
 
 Default ports:
-- Flask API → 8000
+- Flask API → 5050
 - PostgreSQL → 5432
 
 ---
