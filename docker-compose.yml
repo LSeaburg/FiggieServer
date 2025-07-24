@@ -3,31 +3,49 @@ services:
     image: postgres:15
     container_name: figgie-db
     environment:
-      - POSTGRES_DB=figgie
-      - POSTGRES_USER=figgie
-      - POSTGRES_PASSWORD=secret_password
+      POSTGRES_DB: "figgie"
+      POSTGRES_USER: "figgie"
+      POSTGRES_PASSWORD: "secret_password"
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     restart: unless-stopped
 
-  figgie-server:
+  figgie-server-4p:
     build:
       context: .
       dockerfile: figgie_server/Dockerfile
-    container_name: figgie-server
+    container_name: figgie-server-4p
     depends_on:
       - db
     ports:
       - "5050:5000"
     environment:
-      - NUM_PLAYERS=4
-      - TRADING_DURATION=60
-      - POSTGRES_HOST=db
-      - POSTGRES_DB=figgie
-      - POSTGRES_USER=figgie
-      - POSTGRES_PASSWORD=secret_password
+      NUM_PLAYERS: "4"
+      TRADING_DURATION: "60"
+      POSTGRES_HOST: "db"
+      POSTGRES_DB: "figgie"
+      POSTGRES_USER: "figgie"
+      POSTGRES_PASSWORD: "secret_password"
+    restart: unless-stopped
+
+  figgie-server-5p:
+    build:
+      context: .
+      dockerfile: figgie_server/Dockerfile
+    container_name: figgie-server-5p
+    depends_on:
+      - db
+    ports:
+      - "5051:5000"
+    environment:
+      NUM_PLAYERS: "5"
+      TRADING_DURATION: "60"
+      POSTGRES_HOST: "db"
+      POSTGRES_DB: "figgie"
+      POSTGRES_USER: "figgie"
+      POSTGRES_PASSWORD: "secret_password"
     restart: unless-stopped
 
   figgie-dashboard:
@@ -40,10 +58,10 @@ services:
     ports:
       - "8050:8050"
     environment:
-      - POSTGRES_HOST=db
-      - POSTGRES_DB=figgie
-      - POSTGRES_USER=figgie
-      - POSTGRES_PASSWORD=secret_password
+      POSTGRES_HOST: "db"
+      POSTGRES_DB: "figgie"
+      POSTGRES_USER: "figgie"
+      POSTGRES_PASSWORD: "secret_password"
     restart: unless-stopped
 
 volumes:
