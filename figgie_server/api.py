@@ -60,3 +60,7 @@ def action():
                 return jsonify(error=err), 400
             return jsonify(success=True, **result), 200
         return jsonify(error="Invalid action type"), 400
+
+@app.route("/status", methods=["GET"])
+def status():
+    return jsonify(status=current_app.game.get_game_status()), 200

@@ -39,13 +39,18 @@ class Game:
         Compute and normalize the remaining trading time to a 0-240 scale.
         Ends the round if time has expired.
         """
+        if self.state == "waiting" or self.state == "completed":
+            return
         now = datetime.now().timestamp()
         elapsed = now - (self.start_time or now)
         raw_time_left = max(0.0, TRADING_DURATION - elapsed)
-        if raw_time_left <= 0.0:
+        if raw_time_left == 0.0:
             self.end_round()
-            raw_time_left = 0.0
         return int(raw_time_left / TRADING_DURATION * 240)
+
+    def get_game_status():
+        self._compute_or_finalize_time()
+        return self.state
 
     def reset(self) -> None:
         self.state = "waiting"          # waiting, trading, completed
@@ -122,6 +127,7 @@ class Game:
     def end_round(self) -> None:
         if self.state == "completed":
             return
+        self.state = "completed"
         logger.info(f"Ending round. Goal suit: {self.goal_suit}")
         goal = self.goal_suit
         goal_suit_counts = {pid: p.hand.get(goal, 0) for pid, p in self.players.items()}
@@ -152,7 +158,6 @@ class Game:
             {pid: p.hand.copy() for pid, p in self.players.items()}
         )
         self.pot = 0
-        self.state = "completed"
         logger.info("Round state changed to 'completed'.")
 
     def match_order(self, pid: str, otype: str, suit: str, price: int) -> Tuple[bool, Optional[str], Optional[Order]]:
