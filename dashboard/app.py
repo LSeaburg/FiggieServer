@@ -424,7 +424,6 @@ app.layout = html.Div([
     html.Div([
                 html.H3("Performance Charts", className="section-title"),
                 dcc.Graph(id='profit-chart', className="chart"),
-                dcc.Graph(id='games-chart', className="chart")
             ], className="section"),
         ], className="right-panel"),
     ], className="main-container"),
@@ -475,8 +474,7 @@ def update_experiments_list(n_intervals, n_clicks):
 @app.callback(
     [Output('results-table', 'data'),
      Output('metrics-data', 'children'),
-     Output('profit-chart', 'figure'),
-     Output('games-chart', 'figure')],
+     Output('profit-chart', 'figure')],
     [Input('experiment-dropdown', 'value'),
      Input('interval-component', 'n_intervals')]
 )
@@ -488,7 +486,7 @@ def update_metrics_and_charts(selected_experiment, n_intervals):
             xref="paper", yref="paper",
             x=0.5, y=0.5, showarrow=False
         )
-        return [], "", empty_fig, empty_fig
+        return [], "", empty_fig
     
     df = data_manager.fetch_metrics(selected_experiment)
     
@@ -498,7 +496,7 @@ def update_metrics_and_charts(selected_experiment, n_intervals):
             xref="paper", yref="paper",
             x=0.5, y=0.5, showarrow=False
         )
-        return [], "", empty_fig, empty_fig
+        return [], "", empty_fig
     
     # Create profit chart
     profit_fig = px.bar(
@@ -512,17 +510,7 @@ def update_metrics_and_charts(selected_experiment, n_intervals):
     )
     profit_fig.update_layout(height=400)
     
-    # Create games chart
-    games_fig = px.bar(
-        df,
-        x='attr_name',
-        y='num_games',
-        title='Number of Games by Agent Type',
-        labels={'num_games': 'Number of Games', 'attr_name': 'Agent Type'},
-        color='avg_net_profit',
-        color_continuous_scale='RdYlGn'
-    )
-    games_fig.update_layout(height=400)
+    # Removed games chart
     
     # Convert Decimal objects to float for JSON serialization
     records = df.to_dict('records')
@@ -533,7 +521,7 @@ def update_metrics_and_charts(selected_experiment, n_intervals):
             elif pd.isna(value):  # Handle NaN values
                 record[key] = None
     
-    return records, json.dumps(records), profit_fig, games_fig
+    return records, json.dumps(records), profit_fig
 
 @app.callback(
     Output('experiment-info', 'children'),
