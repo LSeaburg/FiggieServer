@@ -9,17 +9,21 @@ from typing import List, Tuple, Dict, Any
 
 from agents.figgie_interface import FiggieInterface
 import figgie_server.db as db
+import requests
 
 def make_agent(
     agent_config: Tuple[str, str, float, Dict[str, Any]],
     name: str,
     server_url: str,
+    trading_duration: int,
 ) -> FiggieInterface:
     """
     Dynamically import and instantiate an agent with extra kwargs.
     agent_config: (module_name, attribute_name, polling_rate, extra_kwargs)
     """
     module_name, attr_name, effective_polling_rate, extra_kwargs = agent_config
+
+    true_polling_rate = effective_polling_rate * trading_duration / 240
 
     module = importlib.import_module(f"agents.traders.{module_name}")
     factory = getattr(module, attr_name)
@@ -28,7 +32,7 @@ def make_agent(
     init_kwargs = {
         "name": name,
         "server_url": server_url,
-        "polling_rate": effective_polling_rate,
+        "polling_rate": true_polling_rate,
     }
     # Merge agent-specific overrides
     init_kwargs.update(extra_kwargs)
@@ -43,7 +47,7 @@ def make_agent(
             return factory(**init_kwargs)
         except TypeError:
             # Fallback to positional signature
-            return factory(name, server_url, effective_polling_rate)
+            return factory(name, server_url, true_polling_rate)
 
     raise ValueError(f"Cannot instantiate agent from entry {agent_config}")
 
@@ -59,6 +63,24 @@ def run_game(
     if num_players not in {4, 5}:
         raise RuntimeError(f"Number of players must be 4 or 5.")
 
+    # Pre-flight: check server status and queue
+    try:
+        status_resp = requests.get(f"{server_url}/status", timeout=5)
+        status_resp.raise_for_status()
+        status_data = status_resp.json()
+    except Exception as exc:
+        raise RuntimeError(f"Failed to fetch server status from {server_url}/status: {exc}")
+
+    server_state = status_data.get("state")
+    current_players = int(status_data.get("current_players"))
+    trading_duration = int(status_data.get("trading_duration"))
+
+    if server_state == "trading":
+        raise RuntimeError("Server is busy: current status is 'trading'.")
+
+    if server_state == "waiting" and current_players != 0:
+        raise RuntimeError("Players already queued: server is in 'waiting' with non-empty queue.")
+
     logging.info(f"Spawning {num_players} agents...")
     clients = []
 
@@ -66,7 +88,7 @@ def run_game(
         module_name, attr_name, _, extra_kwargs = agent_config
         player_name = f"{attr_name}{idx}"
         logging.info(f"Starting agent {player_name} ({module_name}.{attr_name})")
-        client = make_agent(agent_config, player_name, server_url)
+        client = make_agent(agent_config, player_name, server_url, trading_duration)
         # Log agent registration
         db.log_agent(client.player_id, module_name, attr_name, extra_kwargs, client.polling_rate, experiment_id)
         clients.append(client)
