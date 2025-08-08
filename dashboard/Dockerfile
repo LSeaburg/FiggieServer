@@ -11,6 +11,7 @@ RUN pip install --no-cache-dir dash pandas plotly psycopg-binary psycopg
 # Copy application code
 COPY dashboard ./dashboard
 COPY figgie_server ./figgie_server
+COPY agents ./agents
 
 # Expose Dash default port
 EXPOSE 8050
