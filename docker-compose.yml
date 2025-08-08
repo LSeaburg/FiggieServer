@@ -11,6 +11,10 @@ services:
     ports:
       - "5432:5432"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U figgie"]
+      interval: 5s
+      retries: 5
 
   figgie-server-4p:
     build:
@@ -18,7 +22,8 @@ services:
       dockerfile: figgie_server/Dockerfile
     container_name: figgie-server-4p
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
       - "5050:5000"
     environment:
@@ -36,7 +41,8 @@ services:
       dockerfile: figgie_server/Dockerfile
     container_name: figgie-server-5p
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
       - "5051:5000"
     environment:
@@ -54,7 +60,8 @@ services:
       dockerfile: dashboard/Dockerfile
     container_name: figgie-dashboard
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
       - "8050:8050"
     environment:
@@ -62,6 +69,8 @@ services:
       POSTGRES_DB: "figgie"
       POSTGRES_USER: "figgie"
       POSTGRES_PASSWORD: "secret_password"
+      FIGGIE_SERVER_4P_URL: "http://figgie-server-4p:5000"
+      FIGGIE_SERVER_5P_URL: "http://figgie-server-5p:5000"
     restart: unless-stopped
 
 volumes:
