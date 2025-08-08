@@ -24,7 +24,7 @@ class NoiseTrader(FiggieInterface):
         self,
         server_url: str,
         name: str,
-        polling_rate: float = 1.0,
+        polling_rate: float,
         aggression: float = 0.5,
         default_val: int = 7,
         sigma: float = 1.0

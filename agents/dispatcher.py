@@ -11,27 +11,24 @@ from agents.figgie_interface import FiggieInterface
 import figgie_server.db as db
 
 def make_agent(
-    agent_config: Tuple[str, str, Dict[str, Any]],
+    agent_config: Tuple[str, str, float, Dict[str, Any]],
     name: str,
     server_url: str,
-    default_polling_rate: float
 ) -> FiggieInterface:
     """
     Dynamically import and instantiate an agent with extra kwargs.
-    agent_config: (module_name, attribute_name, extra_kwargs)
+    agent_config: (module_name, attribute_name, polling_rate, extra_kwargs)
     """
-    module_name, attr_name, extra_kwargs = agent_config
+    module_name, attr_name, effective_polling_rate, extra_kwargs = agent_config
 
     module = importlib.import_module(f"agents.traders.{module_name}")
     factory = getattr(module, attr_name)
 
-    pr = extra_kwargs.pop("polling_rate", default_polling_rate)
-
     # Base init kwargs
     init_kwargs = {
-        "server_url": server_url,
         "name": name,
-        "polling_rate": pr,
+        "server_url": server_url,
+        "polling_rate": effective_polling_rate,
     }
     # Merge agent-specific overrides
     init_kwargs.update(extra_kwargs)
@@ -46,16 +43,15 @@ def make_agent(
             return factory(**init_kwargs)
         except TypeError:
             # Fallback to positional signature
-            return factory(name, server_url, polling_rate)
+            return factory(name, server_url, effective_polling_rate)
 
     raise ValueError(f"Cannot instantiate agent from entry {agent_config}")
 
 
 def run_game(
-    agents: List[Tuple[str, str, Dict[str, Any]]],
+    agents: List[Tuple[str, str, float, Dict[str, Any]]],
     server_url: str,
-    experiment_id: int = 0, 
-    polling_rate: float = 0.25,
+    experiment_id: int = 0,
 ) -> None:
     logging.basicConfig(level=logging.INFO)
 
@@ -67,10 +63,10 @@ def run_game(
     clients = []
 
     for idx, agent_config in enumerate(agents):
-        module_name, attr_name, extra_kwargs = agent_config
+        module_name, attr_name, _, extra_kwargs = agent_config
         player_name = f"{attr_name}{idx}"
         logging.info(f"Starting agent {player_name} ({module_name}.{attr_name})")
-        client = make_agent(agent_config, player_name, server_url, polling_rate)
+        client = make_agent(agent_config, player_name, server_url)
         # Log agent registration
         db.log_agent(client.player_id, module_name, attr_name, extra_kwargs, client.polling_rate, experiment_id)
         clients.append(client)

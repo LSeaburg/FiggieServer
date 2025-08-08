@@ -33,7 +33,7 @@ class Fundamentalist(FiggieInterface):
         self,
         server_url: str,
         name: str,
-        polling_rate: float = 1.0,
+        polling_rate: float,
         aggression: float = 0.5,
         buy_ratio: float = 1.7
     ) -> None:

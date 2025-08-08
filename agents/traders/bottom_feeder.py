@@ -54,7 +54,7 @@ class BottomFeeder(FiggieInterface):
         self,
         server_url: str,
         name: str,
-        polling_rate: float = 1.0,
+        polling_rate: float,
         aggression: float = 0.5,
         look_depth: int = 4
     ) -> None:
