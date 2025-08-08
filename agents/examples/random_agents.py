@@ -4,9 +4,11 @@ import os
 import time
 import random
 import requests
-from figgie_interface import FiggieInterface
+from agents.figgie_interface import FiggieInterface
 
 SUITS = ["spades", "clubs", "hearts", "diamonds"]
+
+SERVER_URL = "http://localhost:5050"
 
 # This file launches 4 agents that perform random actions, including bids, offers,
 # and cancellations.  This should be mainly used as a reference for how to program 
@@ -14,7 +16,7 @@ SUITS = ["spades", "clubs", "hearts", "diamonds"]
 # For more control over agent behavior and for an easier deployment framework see
 # the system layed out in dispatcher.py.
 
-def make_client(name, server_url="http://localhost:8000", polling_rate=0.1):
+def make_client(name, server_url=SERVER_URL, polling_rate=0.1):
     fig = FiggieInterface(server_url, name=name, polling_rate=polling_rate)
 
     @fig.on_start
