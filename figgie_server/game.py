@@ -48,7 +48,7 @@ class Game:
             self.end_round()
         return int(raw_time_left / TRADING_DURATION * 240)
 
-    def get_game_status():
+    def get_game_status(self):
         self._compute_or_finalize_time()
         return self.state
 
