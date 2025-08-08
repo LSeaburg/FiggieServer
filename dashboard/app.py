@@ -15,7 +15,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from agents.dispatcher import run_game
+from agents.dispatcher import run_game, AgentConfig
 from figgie_server.db import get_connection
 
 # Configuration
@@ -622,17 +622,17 @@ def run_experiment_callback(n_clicks, exp_id):
                 kwargs = extra.copy()
             else:
                 kwargs = {}
-            kwargs['polling_rate'] = pr
-            agents.append((module_name, attr_name, kwargs))
+            # polling_rate is modeled explicitly in AgentConfig now
+            agents.append(AgentConfig(module_name, attr_name, float(pr), kwargs))
         
         # Determine server URL based on number of agents
         server_url = FOUR_PLAYER_SERVER if len(agents) == 4 else FIVE_PLAYER_SERVER
         
         # Run game in background thread
         threading.Thread(
-            target=run_game, 
-            args=(agents, server_url, exp_id, DEFAULT_POLLING_RATE), 
-            daemon=True
+            target=run_game,
+            args=(agents, server_url, exp_id),
+            daemon=True,
         ).start()
         
         return html.Div(f"Running experiment {exp_id} with {len(agents)} agents...", className="success-message")

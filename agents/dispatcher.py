@@ -1,27 +1,34 @@
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import importlib
 import time
 import logging
-from typing import List, Tuple, Dict, Any
+from dataclasses import dataclass, field
+from typing import List, Dict, Any
 
 from agents.figgie_interface import FiggieInterface
 import figgie_server.db as db
 import requests
 
+@dataclass
+class AgentConfig:
+    module_name: str
+    attribute_name: str
+    polling_rate: float = 1.0
+    extra_kwargs: Dict[str, Any] = field(default_factory=dict)
+
 def make_agent(
-    agent_config: Tuple[str, str, float, Dict[str, Any]],
+    agent_config: AgentConfig,
     name: str,
     server_url: str,
     trading_duration: int,
 ) -> FiggieInterface:
     """
     Dynamically import and instantiate an agent with extra kwargs.
-    agent_config: (module_name, attribute_name, polling_rate, extra_kwargs)
+    agent_config holds: module_name, attribute_name, polling_rate, extra_kwargs
     """
-    module_name, attr_name, effective_polling_rate, extra_kwargs = agent_config
+    module_name = agent_config.module_name
+    attr_name = agent_config.attribute_name
+    effective_polling_rate = agent_config.polling_rate
+    extra_kwargs = agent_config.extra_kwargs
 
     true_polling_rate = effective_polling_rate * trading_duration / 240
 
@@ -53,7 +60,7 @@ def make_agent(
 
 
 def run_game(
-    agents: List[Tuple[str, str, float, Dict[str, Any]]],
+    agents: List[AgentConfig],
     server_url: str,
     experiment_id: int = 0,
 ) -> None:
@@ -85,12 +92,21 @@ def run_game(
     clients = []
 
     for idx, agent_config in enumerate(agents):
-        module_name, attr_name, _, extra_kwargs = agent_config
+        module_name = agent_config.module_name
+        attr_name = agent_config.attribute_name
+        extra_kwargs = agent_config.extra_kwargs
         player_name = f"{attr_name}{idx}"
         logging.info(f"Starting agent {player_name} ({module_name}.{attr_name})")
         client = make_agent(agent_config, player_name, server_url, trading_duration)
         # Log agent registration
-        db.log_agent(client.player_id, module_name, attr_name, extra_kwargs, client.polling_rate, experiment_id)
+        db.log_agent(
+            client.player_id,
+            module_name,
+            attr_name,
+            extra_kwargs,
+            client.polling_rate,
+            experiment_id,
+        )
         clients.append(client)
 
     try:
