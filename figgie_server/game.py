@@ -50,7 +50,9 @@ class Game:
 
     def get_game_status(self):
         self._compute_or_finalize_time()
-        return self.state
+        now = datetime.now().timestamp()
+        time_left = TRADING_DURATION - (now - (self.start_time or now)) if self.state == "trading" else 0
+        return self.state, time_left
 
     def reset(self) -> None:
         self.state = "waiting"          # waiting, trading, completed

@@ -64,8 +64,11 @@ def action():
 
 @app.route("/status", methods=["GET"])
 def status():
+    state, time_left = current_app.game.get_game_status()
     return jsonify(
-        status=current_app.game.get_game_status(),
-        players=int(os.getenv("NUM_PLAYERS", "4")),
-        trading_duration=int(os.getenv("TRADING_DURATION", str(4 * 60)))
+        state=state,
+        time_left=time_left,
+        current_players=len(current_app.game.players),
+        total_players=int(os.getenv("NUM_PLAYERS", "4")),
+        trading_duration=int(os.getenv("TRADING_DURATION", str(4 * 60))),
         ), 200
