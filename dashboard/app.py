@@ -15,7 +15,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from agents.dispatcher import run_game, AgentConfig
+from agents.dispatcher import preflight_check, run_game, AgentConfig
+from agents.dispatcher import ServerBusyError, ServerQueuePendingError, ServerStatusUnavailable
 from figgie_server.db import get_connection
 
 # Configuration
@@ -470,8 +471,6 @@ def update_experiment_info(selected_experiment, experiments_json):
     except:
         return ""
 
-
-
 @app.callback(
     [Output(f'agent-block-{i}', 'style') for i in range(1, 6)],
     Input('num-players', 'value')
@@ -515,8 +514,6 @@ def initialize_agent_config_store(num_players, current_data):
             })
     
     return agent_data
-
-
 
 @app.callback(
     Output('save-output', 'children'),
@@ -609,7 +606,7 @@ def run_experiment_callback(n_clicks, exp_id):
             rows = cur.fetchall()
         
         if not rows:
-            return html.Div("❌ No agents found for this experiment", className="error-message")
+            return html.Div("No agents found for this experiment", className="error-message")
         
         agents = []
         for module_name, attr_name, pr, extra in rows:
@@ -628,6 +625,16 @@ def run_experiment_callback(n_clicks, exp_id):
         # Determine server URL based on number of agents
         server_url = FOUR_PLAYER_SERVER if len(agents) == 4 else FIVE_PLAYER_SERVER
         
+        # Pre-flight server status check to gracefully handle busy server
+        try:
+            preflight_check(server_url)
+        except ServerBusyError:
+            return html.Div("Server is busy running a game. Please wait for it to complete.", className="error-message")
+        except ServerQueuePendingError:
+            return html.Div("Server is preparing a game with queued players. Please try again shortly.", className="error-message")
+        except ServerStatusUnavailable as exc:
+            return html.Div(f"Could not reach server at {server_url}: {exc}", className="error-message")
+
         # Run game in background thread
         threading.Thread(
             target=run_game,

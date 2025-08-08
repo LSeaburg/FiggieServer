@@ -8,6 +8,15 @@ from agents.figgie_interface import FiggieInterface
 import figgie_server.db as db
 import requests
 
+class ServerStatusUnavailable(RuntimeError):
+    """Raised when the server status endpoint cannot be reached or parsed."""
+
+class ServerBusyError(RuntimeError):
+    """Raised when the server is currently trading and cannot accept a new game."""
+
+class ServerQueuePendingError(RuntimeError):
+    """Raised when the server is waiting with an existing non-empty queue."""
+
 @dataclass
 class AgentConfig:
     module_name: str
@@ -58,6 +67,41 @@ def make_agent(
 
     raise ValueError(f"Cannot instantiate agent from entry {agent_config}")
 
+def get_server_status(server_url: str) -> Dict[str, Any]:
+    """Fetch and return the server status JSON.
+
+    Raises ServerStatusUnavailable on failure.
+    """
+    try:
+        status_resp = requests.get(f"{server_url}/status", timeout=5)
+        status_resp.raise_for_status()
+        return status_resp.json()
+    except Exception as exc:
+        raise ServerStatusUnavailable(
+            f"Failed to fetch server status from {server_url}/status: {exc}"
+        )
+
+def preflight_check(server_url: str) -> Dict[str, Any]:
+    """Validate the server is ready to accept a new game.
+
+    Returns the status payload if OK, otherwise raises a specific exception.
+    """
+    status_data = get_server_status(server_url)
+    server_state = status_data.get("state")
+    try:
+        current_players = int(status_data.get("current_players") or 0)
+    except (TypeError, ValueError):
+        current_players = 0
+
+    if server_state == "trading":
+        raise ServerBusyError("Server is busy: current status is 'trading'.")
+
+    if server_state == "waiting" and current_players != 0:
+        raise ServerQueuePendingError(
+            "Players already queued: server is in 'waiting' with non-empty queue."
+        )
+
+    return status_data
 
 def run_game(
     agents: List[AgentConfig],
@@ -71,22 +115,8 @@ def run_game(
         raise RuntimeError(f"Number of players must be 4 or 5.")
 
     # Pre-flight: check server status and queue
-    try:
-        status_resp = requests.get(f"{server_url}/status", timeout=5)
-        status_resp.raise_for_status()
-        status_data = status_resp.json()
-    except Exception as exc:
-        raise RuntimeError(f"Failed to fetch server status from {server_url}/status: {exc}")
-
-    server_state = status_data.get("state")
-    current_players = int(status_data.get("current_players"))
+    status_data = preflight_check(server_url)
     trading_duration = int(status_data.get("trading_duration"))
-
-    if server_state == "trading":
-        raise RuntimeError("Server is busy: current status is 'trading'.")
-
-    if server_state == "waiting" and current_players != 0:
-        raise RuntimeError("Players already queued: server is in 'waiting' with non-empty queue.")
 
     logging.info(f"Spawning {num_players} agents...")
     clients = []
