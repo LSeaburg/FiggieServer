@@ -4,7 +4,7 @@ import requests
 from dataclasses import dataclass
 from typing import Optional, Literal
 
-from figgie_interface import FiggieInterface
+from agents.figgie_interface import FiggieInterface
 
 SUITS = ["spades", "clubs", "hearts", "diamonds"]
 
