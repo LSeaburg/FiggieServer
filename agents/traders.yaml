@@ -1,0 +1,43 @@
+- name: BottomFeeder
+  class: bottom_feeder.BottomFeeder
+  params:
+    - name: aggression
+      type: float
+      default: 0.5
+      min: 0.0
+      max: 1.0
+    - name: look_depth
+      type: int
+      default: 4
+      min: 1
+
+- name: Fundamentalist
+  class: fundamentalist.Fundamentalist
+  params:
+    - name: aggression
+      type: float
+      default: 0.5
+      min: 0.0
+      max: 1.0
+    - name: buy_ratio
+      type: float
+      default: 1.7
+      min: 1.0
+
+- name: NoiseTrader
+  class: noise_trader.NoiseTrader
+  params:
+    - name: aggression
+      type: float
+      default: 0.5
+      min: 0.0
+      max: 1.0
+    - name: default_val
+      type: int
+      default: 7
+      min: 1
+    - name: sigma
+      type: float
+      default: 1.0
+      min: 0.0
+      max: 10.0
