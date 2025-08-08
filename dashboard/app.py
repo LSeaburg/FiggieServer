@@ -25,6 +25,10 @@ from figgie_server.db import get_connection
 FOUR_PLAYER_SERVER = os.getenv("FIGGIE_SERVER_4P_URL", "http://localhost:5050")
 FIVE_PLAYER_SERVER = os.getenv("FIGGIE_SERVER_5P_URL", "http://localhost:5051")
 
+DEFAULT_POLLING_RATE = 0.25
+MIN_POLLING_RATE = 0.01
+REFRESH_INTERVAL = 5000  # 5 seconds
+
 # Load agent specifications from YAML
 def _load_agent_specs() -> Tuple[List[Dict[str, Any]], Dict[str, str], List[str]]:
     """Load agent specs from agents/traders.yaml.
@@ -127,9 +131,6 @@ def _render_param_input(agent_index: int, param_spec: Dict[str, Any], value: Any
             className="agent-input"
         )
     ], className="agent-param")
-
-DEFAULT_POLLING_RATE = 0.25
-REFRESH_INTERVAL = 2000  # 2 seconds
 
 # SQL queries
 _FETCH_METRICS_SQL = """
@@ -346,6 +347,7 @@ app.layout = html.Div([
                                     type='number', 
                                     value=0.25, 
                                     step=0.01,
+                                    min=MIN_POLLING_RATE,
                                     className="agent-input"
                                 ),
                                 # Dynamic param inputs placeholder
@@ -656,6 +658,100 @@ def save_experiment(n_clicks, name, description, num_players, *args):
     dyn_values = args[10] if len(args) > 10 else []
     dyn_ids = args[11] if len(args) > 11 else []
     
+    # Server-side validation before any DB writes
+    mapping = dict(MODULE_TO_ATTR)
+    errors: List[str] = []
+
+    # Build a lookup from dynamic control id -> value once
+    id_to_value: Dict[str, Any] = {}
+    try:
+        for cid, val in zip(dyn_ids or [], dyn_values or []):
+            if isinstance(cid, dict):
+                key = f"{cid.get('idx')}::{cid.get('name')}"
+                id_to_value[key] = val
+    except Exception:
+        id_to_value = {}
+
+    # Collect validated agents to insert
+    validated_agents: List[Tuple[str, str, float, Dict[str, Any]]] = []
+
+    for i in range(num_players):
+        module = modules[i] if modules[i] else (TRADERS[0][0] if TRADERS else None)
+        if not module:
+            errors.append(f"Agent {i+1}: Missing agent module")
+            continue
+
+        attr_name = mapping.get(module)
+        if not attr_name:
+            errors.append(f"Agent {i+1}: Unknown module '{module}'")
+            continue
+
+        # Validate polling rate
+        raw_pr = polling_rates[i] if i < len(polling_rates) else None
+        pr_val: Optional[float]
+        try:
+            pr_val = float(raw_pr) if raw_pr is not None else None
+        except (TypeError, ValueError):
+            pr_val = None
+        if pr_val is None or pr_val <= 0:
+            errors.append(f"Agent {i+1}: Polling rate is required and must be > 0")
+
+        # Build and validate extra kwargs using YAML spec
+        extra_kwargs: Dict[str, Any] = {}
+        current_params = _get_params_for_module(module)
+        for p in current_params:
+            pname = p.get('name')
+            if pname is None:
+                continue
+            ptype = p.get('type', 'text')
+            pmin = p.get('min')
+            pmax = p.get('max')
+            default_val = p.get('default')
+            key = f"{i+1}::{pname}"
+            value = id_to_value.get(key, default_val)
+
+            # Type coercion
+            try:
+                if ptype == 'int' and value is not None:
+                    value = int(value)
+                elif ptype == 'float' and value is not None:
+                    value = float(value)
+                elif ptype == 'bool' and value is not None:
+                    # RadioItems already yields booleans; leave as-is
+                    value = bool(value)
+            except (TypeError, ValueError):
+                errors.append(f"Agent {i+1}: Parameter '{pname}' has invalid type")
+                continue
+
+            # If a numeric param declares bounds, a None value is invalid
+            if ptype in ('int', 'float') and (pmin is not None or pmax is not None) and value is None:
+                errors.append(f"Agent {i+1}: Parameter '{pname}' is required and must be a number")
+                continue
+
+            # Range validation
+            try:
+                if pmin is not None and value is not None and value < pmin:
+                    errors.append(f"Agent {i+1}: '{pname}' must be >= {pmin}")
+                if pmax is not None and value is not None and value > pmax:
+                    errors.append(f"Agent {i+1}: '{pname}' must be <= {pmax}")
+            except TypeError:
+                # Skip range check if incomparable types
+                pass
+
+            extra_kwargs[pname] = value
+
+        if not errors:
+            # pr_val is validated to be a float > 0 above
+            validated_agents.append((module, attr_name, float(pr_val), extra_kwargs))
+
+    if errors:
+        # Do not write anything; show all validation errors
+        return html.Div([
+            html.Div("Invalid configuration. Please fix the following:", className="error-message"),
+            html.Ul([html.Li(err) for err in errors])
+        ])
+
+    # Proceed with DB writes in a transaction
     try:
         conn = get_connection()
         with conn.cursor() as cursor:
@@ -667,50 +763,22 @@ def save_experiment(n_clicks, name, description, num_players, *args):
                 (name, description, datetime.now(timezone.utc))
             )
             exp_id = cursor.fetchone()[0]
-            
-            # Create agents based on form configuration
-            mapping = dict(MODULE_TO_ATTR)
-            
-            for i in range(num_players):
-                module = modules[i] if modules[i] else TRADERS[0][0]
-                cls_name = mapping.get(module, '')
-                pr = polling_rates[i] if polling_rates[i] else DEFAULT_POLLING_RATE
-                
-                # Build extra kwargs from dynamic inputs by matching (idx, name)
-                extra_kwargs: Dict[str, Any] = {}
-                # Create a lookup from id -> value
-                id_to_value: Dict[str, Any] = {}
-                try:
-                    for cid, val in zip(dyn_ids or [], dyn_values or []):
-                        # cid is a dict with keys {type, idx, name}
-                        if isinstance(cid, dict):
-                            key = f"{cid.get('idx')}::{cid.get('name')}"
-                            id_to_value[key] = val
-                except Exception:
-                    id_to_value = {}
 
-                current_params = _get_params_for_module(module)
-                for p in current_params:
-                    pname = p.get('name')
-                    default_val = p.get('default')
-                    key = f"{i+0}::{pname}"  # idxs were created as 1..5
-                    value = id_to_value.get(key, default_val)
-                    if pname is not None:
-                        extra_kwargs[pname] = value
-                
-                # Ensure polling rate is stored separately; do not inject into kwargs
-                
+            for i, (module, cls_name, pr, extra_kwargs) in enumerate(validated_agents):
                 cursor.execute('''
                     INSERT INTO experiment_agents
                     (experiment_id, player_index, module_name, attr_name, polling_rate, extra_kwargs) 
                     VALUES (%s, %s, %s, %s, %s, %s)''',
                     (exp_id, i, module, cls_name, pr, json.dumps(extra_kwargs))
                 )
-            conn.commit()
-        
+        conn.commit()
+
         return html.Div(f"Saved experiment {exp_id}: {name} with {num_players} configured agents", className="success-message")
-        
     except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
         return html.Div(f"Error saving experiment: {str(e)}", className="error-message")
 
 @app.callback(
