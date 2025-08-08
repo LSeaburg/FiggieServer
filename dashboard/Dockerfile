@@ -1,16 +1,18 @@
 # Dockerfile for the Dash-based Figgie dashboard
-FROM python:3.13-alpine
+FROM python:3.13-slim
 
 # Set working directory
 WORKDIR /app
 ENV PYTHONPATH=/app
 
-# Install dependencies
-RUN pip install --no-cache-dir dash pandas plotly psycopg-binary psycopg
+RUN apt-get update && apt-get install -y --no-install-recommends libpq5 && rm -rf /var/lib/apt/lists/*
+
+COPY dashboard/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY dashboard ./dashboard
-COPY figgie_server ./figgie_server
+COPY figgie_server/db.py ./figgie_server/db.py
 COPY agents ./agents
 
 # Expose Dash default port

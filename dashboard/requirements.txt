@@ -1,0 +1,6 @@
+dash 
+pandas 
+plotly
+psycopg
+requests
+pyyaml

@@ -6,6 +6,7 @@ psycopg
 psycopg-binary
 numpy
 requests
+pyyaml
 coverage
 pytest
 pytest-docker
