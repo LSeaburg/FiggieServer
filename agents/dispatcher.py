@@ -10,37 +10,28 @@ from typing import List, Tuple, Dict, Any
 from agents.figgie_interface import FiggieInterface
 import figgie_server.db as db
 
-# Configuration: list of (module_name, attribute_name, extra_kwargs)
-# module_name is the Python module (without .py) in the traders folder.
-# attribute_name is the class name (subclass of FiggieInterface) or factory function name.
-# extra_kwargs is a dict of additional parameters for that agent (empty if none).
-AGENTS: List[Tuple[str, str, Dict[str, Any]]] = [
-    ("fundamentalist", "Fundamentalist", {"aggression": 0.8, "buy_ratio": 1.7}),
-    ("fundamentalist", "Fundamentalist", {"aggression": 0.6, "buy_ratio": 1.6}),
-    ("noise_trader", "NoiseTrader", {"aggression": 0.6, "default_val": 7}),
-    ("bottom_feeder", "BottomFeeder", {"aggression": 0.4, "look_depth": 4})
-]
-
 def make_agent(
-    entry: Tuple[str, str, Dict[str, Any]],
+    agent_config: Tuple[str, str, Dict[str, Any]],
     name: str,
     server_url: str,
-    polling_rate: float
+    default_polling_rate: float
 ) -> FiggieInterface:
     """
     Dynamically import and instantiate an agent with extra kwargs.
-    entry: (module_name, attribute_name, extra_kwargs)
+    agent_config: (module_name, attribute_name, extra_kwargs)
     """
-    module_name, attr_name, extra_kwargs = entry
+    module_name, attr_name, extra_kwargs = agent_config
 
     module = importlib.import_module(f"agents.traders.{module_name}")
     factory = getattr(module, attr_name)
+
+    pr = extra_kwargs.pop("polling_rate", default_polling_rate)
 
     # Base init kwargs
     init_kwargs = {
         "server_url": server_url,
         "name": name,
-        "polling_rate": polling_rate,
+        "polling_rate": pr,
     }
     # Merge agent-specific overrides
     init_kwargs.update(extra_kwargs)
@@ -57,29 +48,31 @@ def make_agent(
             # Fallback to positional signature
             return factory(name, server_url, polling_rate)
 
-    raise ValueError(f"Cannot instantiate agent from entry {entry}")
+    raise ValueError(f"Cannot instantiate agent from entry {agent_config}")
 
 
-def main():
+def run_game(
+    agents: List[Tuple[str, str, Dict[str, Any]]],
+    server_url: str,
+    experiment_id: int = 0, 
+    polling_rate: float = 0.25,
+) -> None:
     logging.basicConfig(level=logging.INFO)
-    server_url = os.getenv("SERVER_URL", "http://localhost:5050")
-    polling_rate = float(os.getenv("POLLING_RATE", "0.25"))
-    num_players = int(os.getenv("NUM_PLAYERS", "4"))
 
-    if num_players != len(AGENTS):
-        raise RuntimeError(f"Requested {num_players} players but {len(AGENTS)} configured.")
+    num_players = len(agents)
+    if num_players not in {4, 5}:
+        raise RuntimeError(f"Number of players must be 4 or 5.")
 
-    selected = AGENTS[:num_players]
     logging.info(f"Spawning {num_players} agents...")
     clients = []
 
-    for idx, entry in enumerate(selected, start=1):
-        module_name, attr_name, extra_kwargs = entry
+    for idx, agent_config in enumerate(agents):
+        module_name, attr_name, extra_kwargs = agent_config
         player_name = f"{attr_name}{idx}"
         logging.info(f"Starting agent {player_name} ({module_name}.{attr_name})")
-        client = make_agent(entry, player_name, server_url, polling_rate)
+        client = make_agent(agent_config, player_name, server_url, polling_rate)
         # Log agent registration
-        db.log_agent(client.player_id, module_name, attr_name, extra_kwargs, polling_rate)
+        db.log_agent(client.player_id, module_name, attr_name, extra_kwargs, client.polling_rate, experiment_id)
         clients.append(client)
 
     try:
@@ -119,7 +112,3 @@ def main():
                 c.stop()
             except Exception:
                 logging.exception("Error stopping agent")
-
-
-if __name__ == '__main__':
-    main()
