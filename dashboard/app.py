@@ -2,9 +2,11 @@ import ast
 import os
 import json
 import threading
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime, timezone
 import time
+from pathlib import Path
+import yaml
 
 import dash
 from dash import Dash, html, dcc, dash_table
@@ -23,12 +25,108 @@ from figgie_server.db import get_connection
 FOUR_PLAYER_SERVER = os.getenv("FIGGIE_SERVER_4P_URL", "http://localhost:5050")
 FIVE_PLAYER_SERVER = os.getenv("FIGGIE_SERVER_5P_URL", "http://localhost:5051")
 
-# Available agents for configuration
-TRADERS = [
-    ("fundamentalist", "Fundamentalist"),
-    ("noise_trader", "NoiseTrader"),
-    ("bottom_feeder", "BottomFeeder"),
-]
+# Load agent specifications from YAML
+def _load_agent_specs() -> Tuple[List[Dict[str, Any]], Dict[str, str], List[str]]:
+    """Load agent specs from agents/traders.yaml.
+
+    Returns:
+        - specs: list of {label, module, attr, params}
+        - module_to_attr: mapping module->attr
+        - all_param_names: sorted list of all unique parameter names across agents
+    """
+    # Resolve YAML path relative to repo root
+    current_dir = Path(__file__).resolve().parent
+    yaml_path = (current_dir / ".." / "agents" / "traders.yaml").resolve()
+
+    specs: List[Dict[str, Any]] = []
+    module_to_attr: Dict[str, str] = {}
+    all_param_names_set = set()
+
+    try:
+        with open(yaml_path, "r") as f:
+            data = yaml.safe_load(f) or []
+        for entry in data:
+            name = entry.get("name")
+            cls_path = entry.get("class", "")
+            # Expect format module.attr
+            if "." in cls_path:
+                module, attr = cls_path.split(".", 1)
+            else:
+                module, attr = cls_path, name
+            params = entry.get("params", []) or []
+            for p in params:
+                if isinstance(p, dict) and p.get("name"):
+                    all_param_names_set.add(p["name"])
+            specs.append({
+                "label": name or attr,
+                "module": module,
+                "attr": attr,
+                "params": params,
+            })
+            if module and attr:
+                module_to_attr[module] = attr
+    except Exception as exc:
+        # Fallback to static definitions if YAML cannot be loaded
+        specs = [
+            {"label": "Fundamentalist", "module": "fundamentalist", "attr": "Fundamentalist", "params": []},
+            {"label": "NoiseTrader", "module": "noise_trader", "attr": "NoiseTrader", "params": []},
+            {"label": "BottomFeeder", "module": "bottom_feeder", "attr": "BottomFeeder", "params": []},
+        ]
+        module_to_attr = {s["module"]: s["attr"] for s in specs}
+
+    all_param_names = sorted(all_param_names_set)
+    return specs, module_to_attr, all_param_names
+
+
+AGENT_SPECS, MODULE_TO_ATTR, ALL_PARAM_NAMES = _load_agent_specs()
+# Derived list for dropdowns: (module, label)
+TRADERS: List[Tuple[str, str]] = [(s["module"], s["label"]) for s in AGENT_SPECS]
+
+def _get_params_for_module(module_name: str) -> List[Dict[str, Any]]:
+    for spec in AGENT_SPECS:
+        if spec["module"] == module_name:
+            return spec.get("params", [])
+    return []
+
+def _render_param_input(agent_index: int, param_spec: Dict[str, Any], value: Any) -> html.Div:
+    name = param_spec.get("name")
+    label = name.replace("_", " ").title() if isinstance(name, str) else str(name)
+    ptype = param_spec.get("type", "text")
+    min_val = param_spec.get("min")
+    max_val = param_spec.get("max")
+    step = None
+    input_type = 'text'
+    if ptype == 'int':
+        input_type = 'number'
+        step = 1
+    elif ptype == 'float':
+        input_type = 'number'
+        step = 0.01
+    elif ptype == 'bool':
+        # Use RadioItems for boolean
+        return html.Div([
+            html.Label(label),
+            dcc.RadioItems(
+                id={"type": "agent-param", "idx": agent_index, "name": name},
+                options=[{"label": "True", "value": True}, {"label": "False", "value": False}],
+                value=bool(value) if value is not None else False,
+                inline=True,
+                className="radio-group"
+            )
+        ], className="agent-param")
+
+    return html.Div([
+        html.Label(label),
+        dcc.Input(
+            id={"type": "agent-param", "idx": agent_index, "name": name},
+            type=input_type,
+            value=value,
+            min=min_val,
+            max=max_val,
+            step=step,
+            className="agent-input"
+        )
+    ], className="agent-param")
 
 DEFAULT_POLLING_RATE = 0.25
 REFRESH_INTERVAL = 2000  # 2 seconds
@@ -237,7 +335,7 @@ app.layout = html.Div([
                                 html.Label("Agent Type"),
                                 dcc.Dropdown(
                                     id=f'agent{i}_module',
-                                    options=[{'label': mod, 'value': mod} for mod, _ in TRADERS],
+                                    options=[{'label': label, 'value': module} for module, label in TRADERS],
                                     value=TRADERS[0][0],
                                     clearable=False,
                                     className="agent-dropdown"
@@ -250,14 +348,8 @@ app.layout = html.Div([
                                     step=0.01,
                                     className="agent-input"
                                 ),
-                                html.Label("Extra Configuration (JSON)"),
-                                dcc.Input(
-                                    id=f'agent{i}_extra_kwargs',
-                                    type='text',
-                                    value='',
-                                    placeholder='{"buy_ratio": 1.2}',
-                                    className="agent-input"
-                                ),
+                                # Dynamic param inputs placeholder
+                                html.Div(id={"type": "agent-params-container", "idx": i}, className="agent-params-container"),
                             ], className="agent-config")
                         ], id=f'agent-block-{i}', className="agent-block", style={'display': 'block' if i <= 4 else 'none'})
                         for i in range(1, 6)
@@ -351,7 +443,7 @@ app.layout = html.Div([
     dcc.Store(id='experiment-store'),
     
     # Store for agent configuration data
-    dcc.Store(id='agent-config-store', data={}),
+                    dcc.Store(id='agent-config-store', data={}),
     
 
 ])
@@ -487,6 +579,29 @@ def update_agent_configs(num_players):
     
     return styles
 
+
+# Render dynamic parameter controls whenever agent type changes or num players changes
+@app.callback(
+    [Output({"type": "agent-params-container", "idx": i}, 'children') for i in range(1, 6)],
+    [Input('num-players', 'value')] + [Input(f'agent{i}_module', 'value') for i in range(1, 6)]
+)
+def render_agent_params(num_players, *modules):
+    children = []
+    for i in range(1, 6):
+        module = modules[i-1] if i-1 < len(modules) else (TRADERS[0][0] if TRADERS else None)
+        params = _get_params_for_module(module) if module else []
+        # Defaults from spec
+        rendered = []
+        for p in params:
+            default_val = p.get('default')
+            rendered.append(_render_param_input(i, p, default_val))
+        # Hide entire container when not used
+        if i <= (num_players or 0):
+            children.append(rendered)
+        else:
+            children.append([])
+    return children
+
 # Initialize agent config store when num-players changes
 @app.callback(
     Output('agent-config-store', 'data'),
@@ -523,7 +638,8 @@ def initialize_agent_config_store(num_players, current_data):
     State('num-players', 'value'),
     *[State(f'agent{i}_module', 'value') for i in range(1, 6)],
     *[State(f'agent{i}_polling_rate', 'value') for i in range(1, 6)],
-    *[State(f'agent{i}_extra_kwargs', 'value') for i in range(1, 6)]
+    State({'type': 'agent-param', 'idx': dash.dependencies.ALL, 'name': dash.dependencies.ALL}, 'value'),
+    State({'type': 'agent-param', 'idx': dash.dependencies.ALL, 'name': dash.dependencies.ALL}, 'id')
 )
 def save_experiment(n_clicks, name, description, num_players, *args):
     """Save new experiment to database with form agent configuration"""
@@ -536,7 +652,9 @@ def save_experiment(n_clicks, name, description, num_players, *args):
     # Unpack the args: modules, polling_rates, extra_kwargs
     modules = args[:5]
     polling_rates = args[5:10]
-    extra_kwargs_list = args[10:15]
+    # Last two args are flat lists for all dynamic controls
+    dyn_values = args[10] if len(args) > 10 else []
+    dyn_ids = args[11] if len(args) > 11 else []
     
     try:
         conn = get_connection()
@@ -551,24 +669,36 @@ def save_experiment(n_clicks, name, description, num_players, *args):
             exp_id = cursor.fetchone()[0]
             
             # Create agents based on form configuration
-            mapping = {mod: cls for mod, cls in TRADERS}
+            mapping = dict(MODULE_TO_ATTR)
             
             for i in range(num_players):
                 module = modules[i] if modules[i] else TRADERS[0][0]
                 cls_name = mapping.get(module, '')
                 pr = polling_rates[i] if polling_rates[i] else DEFAULT_POLLING_RATE
                 
-                # Parse extra kwargs
-                extra_kwargs = {}
-                extra_kwargs_str = extra_kwargs_list[i] if extra_kwargs_list[i] else ''
-                if extra_kwargs_str and extra_kwargs_str.strip():
-                    try:
-                        extra_kwargs = json.loads(extra_kwargs_str)
-                    except (ValueError, TypeError) as e:
-                        return html.Div(f"Invalid JSON in agent {i+1} extra configuration: {str(e)}", className="error-message")
+                # Build extra kwargs from dynamic inputs by matching (idx, name)
+                extra_kwargs: Dict[str, Any] = {}
+                # Create a lookup from id -> value
+                id_to_value: Dict[str, Any] = {}
+                try:
+                    for cid, val in zip(dyn_ids or [], dyn_values or []):
+                        # cid is a dict with keys {type, idx, name}
+                        if isinstance(cid, dict):
+                            key = f"{cid.get('idx')}::{cid.get('name')}"
+                            id_to_value[key] = val
+                except Exception:
+                    id_to_value = {}
+
+                current_params = _get_params_for_module(module)
+                for p in current_params:
+                    pname = p.get('name')
+                    default_val = p.get('default')
+                    key = f"{i+0}::{pname}"  # idxs were created as 1..5
+                    value = id_to_value.get(key, default_val)
+                    if pname is not None:
+                        extra_kwargs[pname] = value
                 
-                # Add polling rate to extra kwargs
-                extra_kwargs['polling_rate'] = pr
+                # Ensure polling rate is stored separately; do not inject into kwargs
                 
                 cursor.execute('''
                     INSERT INTO experiment_agents
