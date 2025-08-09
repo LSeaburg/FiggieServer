@@ -155,22 +155,6 @@ body {
   width: 100%;
 }
 
-.agent-dropdown .Select-control {
-  padding: 0.25rem 0.5rem;
-  border: 1px solid #ced4da;
-  border-radius: 6px;
-  font-size: 0.9rem;
-}
-
-.agent-dropdown .Select-control:hover {
-  border-color: #adb5bd;
-}
-
-.agent-dropdown .is-focused .Select-control {
-  border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
-}
-
 /* Radio buttons */
 .radio-group {
   display: flex;

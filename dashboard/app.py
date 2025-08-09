@@ -674,27 +674,47 @@ def update_agent_configs(num_players):
     return styles
 
 
-# Render dynamic parameter controls whenever agent type changes or num players changes
-@app.callback(
-    [Output({"type": "agent-params-container", "idx": i}, 'children') for i in range(1, 6)],
-    [Input('num-players', 'value')] + [Input(f'agent{i}_module', 'value') for i in range(1, 6)]
-)
-def render_agent_params(num_players, *modules):
-    children = []
-    for i in range(1, 6):
-        module = modules[i-1] if i-1 < len(modules) else (TRADERS[0][0] if TRADERS else None)
-        params = _get_params_for_module(module) if module else []
-        # Defaults from spec
+# Individual callbacks for each agent's parameter container to prevent cross-contamination
+def create_agent_params_callback(agent_idx):
+    @app.callback(
+        Output({"type": "agent-params-container", "idx": agent_idx}, 'children'),
+        [Input(f'agent{agent_idx}_module', 'value'),
+         Input('num-players', 'value')],
+        [State({'type': 'agent-param', 'idx': agent_idx, 'name': dash.dependencies.ALL}, 'value'),
+         State({'type': 'agent-param', 'idx': agent_idx, 'name': dash.dependencies.ALL}, 'id')],
+        prevent_initial_call=False
+    )
+    def render_single_agent_params(module_value, num_players, existing_values, existing_ids):
+        # Only render if this agent is within the selected number of players
+        if agent_idx > (num_players or 0):
+            return []
+        
+        params = _get_params_for_module(module_value) if module_value else []
+        
+        # Build a map of existing parameter name -> value
+        existing_param_values = {}
+        if existing_values and existing_ids:
+            for val, id_dict in zip(existing_values, existing_ids):
+                if isinstance(id_dict, dict) and 'name' in id_dict:
+                    param_name = id_dict['name']
+                    existing_param_values[param_name] = val
+        
         rendered = []
         for p in params:
-            default_val = p.get('default')
-            rendered.append(_render_param_input(i, p, default_val))
-        # Hide entire container when not used
-        if i <= (num_players or 0):
-            children.append(rendered)
-        else:
-            children.append([])
-    return children
+            param_name = p.get('name')
+            # Use existing value if available, otherwise use default
+            if param_name in existing_param_values:
+                value = existing_param_values[param_name]
+            else:
+                value = p.get('default')
+            rendered.append(_render_param_input(agent_idx, p, value))
+        return rendered
+    
+    return render_single_agent_params
+
+# Create the callbacks for each agent
+for i in range(1, 6):
+    create_agent_params_callback(i)
 
 # Initialize agent config store when num-players changes
 @app.callback(
