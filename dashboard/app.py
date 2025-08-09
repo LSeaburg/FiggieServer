@@ -92,6 +92,19 @@ def _get_params_for_module(module_name: str) -> List[Dict[str, Any]]:
             return spec.get("params", [])
     return []
 
+def _format_timestamp(timestamp_str: str) -> str:
+    """Format ISO timestamp string to human-readable format"""
+    if not timestamp_str:
+        return "Unknown"
+    
+    try:
+        # Parse the ISO format timestamp
+        dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+        # Format to human-readable string
+        return dt.strftime("%B %d, %Y at %I:%M %p")
+    except (ValueError, AttributeError):
+        return timestamp_str  # Return original if parsing fails
+
 def _render_param_input(agent_index: int, param_spec: Dict[str, Any], value: Any) -> html.Div:
     name = param_spec.get("name")
     label = name.replace("_", " ").title() if isinstance(name, str) else str(name)
@@ -189,8 +202,7 @@ _FETCH_EXPERIMENT_STATS_SQL = """
         e.description,
         e.created_at,
         COUNT(DISTINCT r.round_id) as total_games,
-        COUNT(DISTINCT a.player_id) as total_agents,
-        AVG(r.final_balance - r.initial_balance) as avg_profit
+        COUNT(DISTINCT ea.player_index) as configured_agents
     FROM experiments e
     LEFT JOIN experiment_agents ea ON e.experiment_id = ea.experiment_id
     LEFT JOIN agents a ON ea.experiment_id = a.experiment_id
@@ -224,16 +236,15 @@ class DashboardDataManager:
                 
             experiments = []
             for row in rows:
-                exp_id, name, description, created_at, total_games, total_agents, avg_profit = row
+                exp_id, name, description, created_at, total_games, configured_agents = row
                 experiments.append({
-                    'label': f"{exp_id}: {name} ({total_games} games, {total_agents} agents)",
+                    'label': f"{exp_id}: {name} ({total_games} games, {configured_agents} agents)",
                     'value': exp_id,
                     'name': name,
                     'description': description,
                     'created_at': created_at.isoformat() if created_at else None,
                     'total_games': total_games or 0,
-                    'total_agents': total_agents or 0,
-                    'avg_profit': float(avg_profit) if avg_profit else 0.0
+                    'configured_agents': configured_agents or 0
                 })
             
             self._experiments_cache = experiments
@@ -351,6 +362,63 @@ app.layout = html.Div([
                 html.Div(id="experiment-info", className="experiment-info")
             ], className="section"),
             
+            # Experiment Results moved here
+            html.Div([
+                html.H3("Experiment Results", className="section-title"),
+                html.Div([
+                    html.Button([
+                        html.I(className="fas fa-download"),
+                        " Export CSV"
+                    ], id="export-button", className="btn btn-secondary"),
+                    html.Button(
+                        "Run Experiment", 
+                        id='run-button', 
+                        n_clicks=0,
+                        className="btn btn-success",
+                        style={'marginLeft': '10px'}
+                    ),
+                    html.Span(f"Auto-refresh every {REFRESH_INTERVAL // 1000} seconds", className="auto-refresh-note")
+                ], className="table-controls"),
+                html.Div(id="export-output", className="output-message"),
+                html.Div(id='run-output', className="output-message"),
+    dash_table.DataTable(
+        id='results-table',
+        columns=[
+                        {'name': 'Agent Name', 'id': 'agent_name'},
+                        {'name': 'Config', 'id': 'extra_kwargs'},
+                        {'name': 'Polling Rate', 'id': 'normalized_polling_rate'},
+                        {'name': 'Games', 'id': 'num_games'},
+                        {'name': 'Avg Profit', 'id': 'avg_net_profit', 'type': 'numeric', 'format': {'specifier': '.0f'}},
+                        {'name': 'Min Profit', 'id': 'min_net_profit', 'type': 'numeric', 'format': {'specifier': '.0f'}},
+                        {'name': 'Max Profit', 'id': 'max_net_profit', 'type': 'numeric', 'format': {'specifier': '.0f'}},
+        ],
+        data=[],
+        page_size=10,
+                    style_table={'overflowX': 'auto', 'borderRadius': '12px', 'overflow': 'hidden', 'boxShadow': '0 4px 15px rgba(0, 0, 0, 0.1)'},
+                    style_cell={'textAlign': 'center'},
+                    style_header={
+                        'backgroundColor': '#2c3e50',
+                        'color': 'white',
+                        'fontWeight': 'bold'
+                    },
+                    style_data_conditional=[
+                        {
+                            'if': {'row_index': 'odd'},
+                            'backgroundColor': '#f8f9fa'
+                        }
+                    ]
+                ),
+            ], className="section"),
+            
+            # Performance Charts moved here
+            html.Div([
+                html.H3("Performance Charts", className="section-title"),
+                dcc.Graph(id='profit-chart', className="chart"),
+            ], className="section"),
+        ], className="left-panel"),
+        
+        # Right panel - Create New Experiment moved here
+        html.Div([
             # New experiment configuration
             html.Div([
                 html.H3("Create New Experiment", className="section-title"),
@@ -426,65 +494,9 @@ app.layout = html.Div([
                         n_clicks=0,
                         className="btn btn-primary"
                     ),
-                    html.Button(
-                        "Run Experiment", 
-                        id='run-button', 
-                        n_clicks=0,
-                        className="btn btn-success"
-                    ),
                 ], className="button-group"),
                 
                 html.Div(id='save-output', className="output-message"),
-                html.Div(id='run-output', className="output-message"),
-            ], className="section"),
-        ], className="left-panel"),
-        
-        # Right panel - Results and visualizations
-        html.Div([
-            # Metrics table
-            html.Div([
-                html.H3("Experiment Results", className="section-title"),
-                html.Div([
-                    html.Button([
-                        html.I(className="fas fa-download"),
-                        " Export CSV"
-                    ], id="export-button", className="btn btn-secondary"),
-                    html.Span("Auto-refresh every 2 seconds", className="auto-refresh-note")
-                ], className="table-controls"),
-                html.Div(id="export-output", className="output-message"),
-    dash_table.DataTable(
-        id='results-table',
-        columns=[
-                        {'name': 'Agent Name', 'id': 'agent_name'},
-                        {'name': 'Config', 'id': 'extra_kwargs'},
-                        {'name': 'Polling Rate', 'id': 'normalized_polling_rate'},
-                        {'name': 'Games', 'id': 'num_games'},
-                        {'name': 'Avg Profit', 'id': 'avg_net_profit', 'type': 'numeric', 'format': {'specifier': '.0f'}},
-                        {'name': 'Min Profit', 'id': 'min_net_profit', 'type': 'numeric', 'format': {'specifier': '.0f'}},
-                        {'name': 'Max Profit', 'id': 'max_net_profit', 'type': 'numeric', 'format': {'specifier': '.0f'}},
-        ],
-        data=[],
-        page_size=10,
-                    style_table={'overflowX': 'auto', 'borderRadius': '12px', 'overflow': 'hidden', 'boxShadow': '0 4px 15px rgba(0, 0, 0, 0.1)'},
-                    style_cell={'textAlign': 'center'},
-                    style_header={
-                        'backgroundColor': '#2c3e50',
-                        'color': 'white',
-                        'fontWeight': 'bold'
-                    },
-                    style_data_conditional=[
-                        {
-                            'if': {'row_index': 'odd'},
-                            'backgroundColor': '#f8f9fa'
-                        }
-                    ]
-                ),
-            ], className="section"),
-            
-            # Charts
-    html.Div([
-                html.H3("Performance Charts", className="section-title"),
-                dcc.Graph(id='profit-chart', className="chart"),
             ], className="section"),
         ], className="right-panel"),
     ], className="main-container"),
@@ -620,10 +632,9 @@ def update_experiment_info(selected_experiment, experiments_json):
             html.P(experiment['description'] or "No description"),
             html.Div([
                 html.Span(f"Games: {experiment['total_games']}", className="stat"),
-                html.Span(f"Agents: {experiment['total_agents']}", className="stat"),
-                html.Span(f"Avg Profit: {experiment['avg_profit']:.0f}", className="stat"),
+                html.Span(f"Agents: {experiment['configured_agents']}", className="stat"),
             ], className="experiment-stats"),
-            html.Small(f"Created: {experiment['created_at']}")
+            html.Small(f"Created: {_format_timestamp(experiment['created_at'])}")
         ])
     except:
         return ""
