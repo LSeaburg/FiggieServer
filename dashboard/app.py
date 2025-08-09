@@ -513,6 +513,21 @@ app.layout = html.Div([
         disabled=False
     ),
     
+    # Hidden interval components for auto-clearing messages
+    dcc.Interval(
+        id='run-message-timer',
+        interval=3000,  # 3 seconds
+        n_intervals=0,
+        disabled=True
+    ),
+    
+    dcc.Interval(
+        id='save-message-timer',
+        interval=3000,  # 3 seconds
+        n_intervals=0,
+        disabled=True
+    ),
+    
     # Store for experiment data
     dcc.Store(id='experiment-store'),
     
@@ -523,6 +538,28 @@ app.layout = html.Div([
 ])
 
 # Callbacks
+
+# Auto-clear message callbacks
+@app.callback(
+    Output('run-output', 'children', allow_duplicate=True),
+    Output('run-message-timer', 'disabled', allow_duplicate=True),
+    Input('run-message-timer', 'n_intervals'),
+    prevent_initial_call=True
+)
+def clear_run_message(n_intervals):
+    """Clear run experiment message after timer expires"""
+    return "", True
+
+@app.callback(
+    Output('save-output', 'children', allow_duplicate=True),
+    Output('save-message-timer', 'disabled', allow_duplicate=True),
+    Input('save-message-timer', 'n_intervals'),
+    prevent_initial_call=True
+)
+def clear_save_message(n_intervals):
+    """Clear save experiment message after timer expires"""
+    return "", True
+
 @app.callback(
     [Output('experiment-dropdown', 'options'),
      Output('experiments-data', 'children'),
@@ -707,7 +744,8 @@ def initialize_agent_config_store(num_players, current_data):
     return agent_data
 
 @app.callback(
-    Output('save-output', 'children'),
+    [Output('save-output', 'children'),
+     Output('save-message-timer', 'disabled')],
     Input('save-button', 'n_clicks'),
     State('experiment-name', 'value'),
     State('experiment-description', 'value'),
@@ -720,10 +758,10 @@ def initialize_agent_config_store(num_players, current_data):
 def save_experiment(n_clicks, name, description, num_players, *args):
     """Save new experiment to database with form agent configuration"""
     if not n_clicks:
-        return ""
+        return "", True
     
     if not name:
-        return html.Div("Experiment name is required", className="error-message")
+        return html.Div("Experiment name is required", className="error-message"), True
     
     # Unpack the args: modules, polling_rates, extra_kwargs
     modules = args[:5]
@@ -823,7 +861,7 @@ def save_experiment(n_clicks, name, description, num_players, *args):
         return html.Div([
             html.Div("Invalid configuration. Please fix the following:", className="error-message"),
             html.Ul([html.Li(err) for err in errors])
-        ])
+        ]), True
 
     # Proceed with DB writes in a transaction
     try:
@@ -847,26 +885,27 @@ def save_experiment(n_clicks, name, description, num_players, *args):
                 )
         conn.commit()
 
-        return html.Div(f"Saved experiment {exp_id}: {name} with {num_players} configured agents", className="success-message")
+        return html.Div(f"Saved experiment {exp_id}: {name} with {num_players} configured agents", className="success-message message-auto-hide"), False
     except Exception as e:
         try:
             conn.rollback()
         except Exception:
             pass
-        return html.Div(f"Error saving experiment: {str(e)}", className="error-message")
+        return html.Div(f"Error saving experiment: {str(e)}", className="error-message message-auto-hide"), False
 
 @app.callback(
-    Output('run-output', 'children'),
+    [Output('run-output', 'children'),
+     Output('run-message-timer', 'disabled')],
     Input('run-button', 'n_clicks'),
     State('experiment-dropdown', 'value')
 )
 def run_experiment_callback(n_clicks, exp_id):
     """Run selected experiment"""
     if not n_clicks:
-        return ""
+        return "", True
     
     if not exp_id:
-        return html.Div("Select an experiment to run", className="error-message")
+        return html.Div("Select an experiment to run", className="error-message"), True
     
     try:
         conn = get_connection()
@@ -878,7 +917,7 @@ def run_experiment_callback(n_clicks, exp_id):
             rows = cur.fetchall()
         
         if not rows:
-            return html.Div("No agents found for this experiment", className="error-message")
+            return html.Div("No agents found for this experiment", className="error-message message-auto-hide"), False
         
         agents = []
         for module_name, attr_name, pr, extra in rows:
@@ -901,11 +940,11 @@ def run_experiment_callback(n_clicks, exp_id):
         try:
             preflight_check(server_url)
         except ServerBusyError:
-            return html.Div("Server is busy running a game. Please wait for it to complete.", className="error-message")
+            return html.Div("Server is busy running a game. Please wait for it to complete.", className="error-message message-auto-hide"), False
         except ServerQueuePendingError:
-            return html.Div("Server is preparing a game with queued players. Please try again shortly.", className="error-message")
+            return html.Div("Server is preparing a game with queued players. Please try again shortly.", className="error-message message-auto-hide"), False
         except ServerStatusUnavailable as exc:
-            return html.Div(f"Could not reach server at {server_url}: {exc}", className="error-message")
+            return html.Div(f"Could not reach server at {server_url}: {exc}", className="error-message message-auto-hide"), False
 
         # Run game in background thread
         threading.Thread(
@@ -914,10 +953,10 @@ def run_experiment_callback(n_clicks, exp_id):
             daemon=True,
         ).start()
         
-        return html.Div(f"Running experiment {exp_id} with {len(agents)} agents...", className="success-message")
+        return html.Div(f"Running experiment {exp_id} with {len(agents)} agents...", className="success-message message-auto-hide"), False
         
     except Exception as e:
-        return html.Div(f"Error running experiment: {str(e)}", className="error-message")
+        return html.Div(f"Error running experiment: {str(e)}", className="error-message message-auto-hide"), False
 
 @app.callback(
     Output('export-output', 'children'),

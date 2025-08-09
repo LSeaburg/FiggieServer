@@ -274,6 +274,7 @@ body {
   padding: 1rem;
   border-radius: 8px;
   font-weight: 500;
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
 }
 
 .success-message {
@@ -286,6 +287,26 @@ body {
   background: #f8d7da;
   color: #721c24;
   border: 1px solid #f5c6cb;
+}
+
+/* Auto-hiding message animations */
+.message-auto-hide {
+  animation: messageAutoHide 3s ease-out forwards;
+}
+
+@keyframes messageAutoHide {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
 }
 
 /* Experiment info */
