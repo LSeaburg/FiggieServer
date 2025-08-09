@@ -122,7 +122,7 @@ def _render_param_input(agent_index: int, param_spec: Dict[str, Any], value: Any
     elif ptype == 'bool':
         # Use RadioItems for boolean
         return html.Div([
-            html.Label(label),
+            html.Label(label, className="agent-param-label"),
             dcc.RadioItems(
                 id={"type": "agent-param", "idx": agent_index, "name": name},
                 options=[{"label": "True", "value": True}, {"label": "False", "value": False}],
@@ -133,7 +133,7 @@ def _render_param_input(agent_index: int, param_spec: Dict[str, Any], value: Any
         ], className="agent-param")
 
     return html.Div([
-        html.Label(label),
+        html.Label(label, className="agent-param-label"),
         dcc.Input(
             id={"type": "agent-param", "idx": agent_index, "name": name},
             type=input_type,
@@ -154,33 +154,6 @@ _FETCH_METRICS_SQL = """
       ea.extra_kwargs,
       ea.polling_rate as normalized_polling_rate,
       ea.attr_name || (ea.player_index + 1) AS agent_name,
-      COALESCE(
-        (SELECT AVG(r2.final_balance - r2.initial_balance) 
-         FROM agents a2 
-         JOIN results r2 ON r2.player_id = a2.player_id
-         WHERE a2.experiment_id = ea.experiment_id 
-           AND a2.attr_name = ea.attr_name
-           AND a2.extra_kwargs::text = ea.extra_kwargs::text), 
-        0
-      ) AS avg_net_profit,
-      COALESCE(
-        (SELECT MIN(r2.final_balance - r2.initial_balance) 
-         FROM agents a2 
-         JOIN results r2 ON r2.player_id = a2.player_id
-         WHERE a2.experiment_id = ea.experiment_id 
-           AND a2.attr_name = ea.attr_name
-           AND a2.extra_kwargs::text = ea.extra_kwargs::text), 
-        0
-      ) AS min_net_profit,
-      COALESCE(
-        (SELECT MAX(r2.final_balance - r2.initial_balance) 
-         FROM agents a2 
-         JOIN results r2 ON r2.player_id = a2.player_id
-         WHERE a2.experiment_id = ea.experiment_id 
-           AND a2.attr_name = ea.attr_name
-           AND a2.extra_kwargs::text = ea.extra_kwargs::text), 
-        0
-      ) AS max_net_profit,
       COALESCE(
         (SELECT COUNT(*) 
          FROM agents a2 
@@ -388,9 +361,6 @@ app.layout = html.Div([
                         {'name': 'Config', 'id': 'extra_kwargs'},
                         {'name': 'Polling Rate', 'id': 'normalized_polling_rate'},
                         {'name': 'Games', 'id': 'num_games'},
-                        {'name': 'Avg Profit', 'id': 'avg_net_profit', 'type': 'numeric', 'format': {'specifier': '.0f'}},
-                        {'name': 'Min Profit', 'id': 'min_net_profit', 'type': 'numeric', 'format': {'specifier': '.0f'}},
-                        {'name': 'Max Profit', 'id': 'max_net_profit', 'type': 'numeric', 'format': {'specifier': '.0f'}},
         ],
         data=[],
         page_size=10,
@@ -462,25 +432,36 @@ app.layout = html.Div([
                         html.Div([
                             html.H5(f"Agent {i}", className="agent-title"),
                             html.Div([
-                                html.Label("Agent Type"),
-                                dcc.Dropdown(
-                                    id=f'agent{i}_module',
-                                    options=[{'label': label, 'value': module} for module, label in TRADERS],
-                                    value=TRADERS[0][0],
-                                    clearable=False,
-                                    className="agent-dropdown"
-                                ),
-                                html.Label("Polling Rate"),
-                                dcc.Input(
-                                    id=f'agent{i}_polling_rate', 
-                                    type='number', 
-                                    value=0.25, 
-                                    step=0.01,
-                                    min=MIN_POLLING_RATE,
-                                    className="agent-input"
-                                ),
-                                # Dynamic param inputs placeholder
-                                html.Div(id={"type": "agent-params-container", "idx": i}, className="agent-params-container"),
+                                # Fixed configuration section
+                                html.Div([
+                                    html.Div([
+                                        html.Div([
+                                            html.Label("Agent Type"),
+                                            dcc.Dropdown(
+                                                id=f'agent{i}_module',
+                                                options=[{'label': label, 'value': module} for module, label in TRADERS],
+                                                value=TRADERS[0][0],
+                                                clearable=False,
+                                                className="agent-dropdown"
+                                            ),
+                                        ], className="agent-config-section"),
+                                        html.Div([
+                                            html.Label("Polling Rate"),
+                                            dcc.Input(
+                                                id=f'agent{i}_polling_rate', 
+                                                type='number', 
+                                                value=0.25, 
+                                                step=0.01,
+                                                min=MIN_POLLING_RATE,
+                                                className="agent-input"
+                                            ),
+                                        ], className="agent-config-section"),
+                                    ], className="agent-config-row"),
+                                ], className="agent-config-section"),
+                                # Dynamic parameters section
+                                html.Div([
+                                    html.Div(id={"type": "agent-params-container", "idx": i}, className="agent-params-container"),
+                                ], className="agent-config-section"),
                             ], className="agent-config")
                         ], id=f'agent-block-{i}', className="agent-block", style={'display': 'block' if i <= 4 else 'none'})
                         for i in range(1, 6)

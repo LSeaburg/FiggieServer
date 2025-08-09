@@ -73,11 +73,12 @@ body {
 /* Main container */
 .main-container {
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: minmax(450px, 3fr) minmax(300px, 2fr);
   gap: 2rem;
   padding: 2rem;
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
+  align-items: start;
 }
 
 /* Panels */
@@ -88,6 +89,8 @@ body {
   padding: 2rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
+  min-width: 0; /* Prevents grid blowout */
+  overflow-x: auto; /* Handle content overflow gracefully */
 }
 
 /* Sections */
@@ -152,6 +155,22 @@ body {
   width: 100%;
 }
 
+.agent-dropdown .Select-control {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.agent-dropdown .Select-control:hover {
+  border-color: #adb5bd;
+}
+
+.agent-dropdown .is-focused .Select-control {
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
 /* Radio buttons */
 .radio-group {
   display: flex;
@@ -194,14 +213,32 @@ body {
 }
 
 .agent-config {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
 }
 
+.agent-config-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.agent-config-section:not(:last-child) {
+  margin-bottom: 0.5rem;
+}
+
+.agent-config-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: end;
+}
+
 .agent-config label {
-  grid-column: 1 / -1;
   margin-bottom: 0.25rem;
+  font-weight: 500;
+  color: #495057;
 }
 
 .agent-input {
@@ -209,12 +246,40 @@ body {
   border: 1px solid #ced4da;
   border-radius: 6px;
   font-size: 0.9rem;
+  width: 100%;
 }
 
 .agent-input:focus {
   outline: none;
   border-color: #667eea;
   box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+/* Agent parameter styling */
+.agent-param {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.agent-param-label {
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.agent-params-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.agent-params-container:empty {
+  display: none;
 }
 
 /* Buttons */
@@ -365,12 +430,34 @@ body {
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
+/* Ensure DataTable doesn't cause layout shifts */
+.dash-table-container {
+  width: 100%;
+  min-height: 200px; /* Reserve space even when empty */
+}
+
+.dash-table-container .dash-spreadsheet-container {
+  max-width: 100%;
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner {
+  table-layout: fixed;
+}
+
 /* Charts */
 .chart {
   margin-bottom: 2rem;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  min-height: 400px; /* Reserve space to prevent layout shifts */
+  width: 100%;
+}
+
+/* Ensure plotly charts fit properly */
+.chart .js-plotly-plot {
+  width: 100% !important;
+  height: 400px !important;
 }
 
 /* Responsive design */
@@ -378,10 +465,12 @@ body {
   .main-container {
     grid-template-columns: 1fr;
     gap: 1.5rem;
+    max-width: 1000px;
   }
   
   .left-panel, .right-panel {
     padding: 1.5rem;
+    min-width: auto;
   }
 }
 
@@ -404,7 +493,11 @@ body {
     padding: 1rem;
   }
   
-  .agent-config {
+  .agent-config-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .agent-params-container {
     grid-template-columns: 1fr;
   }
   
