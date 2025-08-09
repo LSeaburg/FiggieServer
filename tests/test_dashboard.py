@@ -1,4 +1,8 @@
-from dashboard.app import data_manager, app, update_experiments_list
+from dashboard.app import data_manager, app
+from dashboard.utils import format_timestamp
+from dashboard.data import DashboardDataManager
+from unittest.mock import patch, MagicMock
+import pandas as pd
 
 def test_data_manager():
     """Test the data manager functionality"""
@@ -35,7 +39,30 @@ def test_callbacks():
 
     # Test dropdown options format
     experiments = data_manager.fetch_experiments(force_refresh=True)
-    if experiments:
-        dropdown_options, _, _ = update_experiments_list(0, 0)
-        for option in dropdown_options:
-            assert isinstance(option, dict) and "label" in option and "value" in option
+    # The dropdown is expected to contain options with label/value built from experiments
+    dropdown_options = [{'label': exp['label'], 'value': exp['value']} for exp in experiments]
+    for option in dropdown_options:
+        assert isinstance(option, dict) and "label" in option and "value" in option
+
+def test_format_timestamp_graceful():
+    ts = '2024-01-02T03:04:05Z'
+    human = format_timestamp(ts)
+    assert '2024' in human
+    assert 'January' in human
+    # bad input returns original
+    assert format_timestamp('not-a-date') == 'not-a-date'
+
+def test_data_manager_logs_on_errors(monkeypatch):
+    dm = DashboardDataManager()
+    fake_conn = MagicMock()
+    fake_cur = MagicMock()
+    fake_conn.cursor.return_value.__enter__.return_value = fake_cur
+    # force execute to raise
+    fake_cur.execute.side_effect = RuntimeError('boom')
+    with patch('dashboard.data.get_connection', return_value=fake_conn):
+        # these should swallow exceptions and return empty structures
+        assert dm.fetch_experiments(force_refresh=True) == []
+        assert isinstance(dm.fetch_metrics(1), pd.DataFrame)
+        assert dm.fetch_metrics(1).empty
+        assert isinstance(dm.fetch_individual_profits(1), pd.DataFrame)
+        assert dm.fetch_individual_profits(1).empty

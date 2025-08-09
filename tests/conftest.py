@@ -1,8 +1,14 @@
 import os
+import sys
 import pytest
 import psycopg
 from pathlib import Path
 from figgie_server import db
+
+# Ensure project root is importable for test modules
+PROJECT_ROOT = Path(__file__).parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 @pytest.fixture(scope="session")
 def docker_compose_file(pytestconfig):
