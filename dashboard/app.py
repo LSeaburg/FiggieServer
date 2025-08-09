@@ -339,20 +339,14 @@ app.layout = html.Div([
             html.Div([
                 html.H3("Experiment Results", className="section-title"),
                 html.Div([
-                    html.Button([
-                        html.I(className="fas fa-download"),
-                        " Export CSV"
-                    ], id="export-button", className="btn btn-secondary"),
                     html.Button(
                         "Run Experiment", 
                         id='run-button', 
                         n_clicks=0,
-                        className="btn btn-success",
-                        style={'marginLeft': '10px'}
+                        className="btn btn-success"
                     ),
                     html.Span(f"Auto-refresh every {REFRESH_INTERVAL // 1000} seconds", className="auto-refresh-note")
                 ], className="table-controls"),
-                html.Div(id="export-output", className="output-message"),
                 html.Div(id='run-output', className="output-message"),
     dash_table.DataTable(
         id='results-table',
@@ -959,25 +953,6 @@ def run_experiment_callback(n_clicks, exp_id):
     except Exception as e:
         return html.Div(f"Error running experiment: {str(e)}", className="error-message message-auto-hide"), False
 
-@app.callback(
-    Output('export-output', 'children'),
-    Input('export-button', 'n_clicks'),
-    State('metrics-data', 'children')
-)
-def export_csv(n_clicks, metrics_json):
-    """Export metrics data to CSV"""
-    if not n_clicks or not metrics_json:
-        return ""
-    
-    try:
-        data = json.loads(metrics_json)
-        df = pd.DataFrame(data)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"figgie_metrics_{timestamp}.csv"
-        df.to_csv(filename, index=False)
-        return html.Div(f"Exported data to {filename}", className="success-message")
-    except Exception as e:
-        return html.Div(f"Export failed: {str(e)}", className="error-message")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8050, debug=True)
