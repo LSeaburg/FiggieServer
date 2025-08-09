@@ -134,20 +134,52 @@ def _render_param_input(agent_index: int, param_spec: Dict[str, Any], value: Any
 
 # SQL queries
 _FETCH_METRICS_SQL = """
-    SELECT
-      a.attr_name,
-      a.extra_kwargs,
-      AVG(r.final_balance - r.initial_balance) AS avg_net_profit,
-      MIN(r.final_balance - r.initial_balance) AS min_net_profit,
-      MAX(r.final_balance - r.initial_balance) AS max_net_profit,
-      COUNT(*) as num_games,
-      ROUND((240.0 * a.polling_rate / ro.round_duration)::numeric, 2) AS normalized_polling_rate
-    FROM results AS r
-    JOIN agents AS a ON r.player_id = a.player_id
-    JOIN rounds AS ro ON r.round_id = ro.round_id
-    WHERE a.experiment_id = %s
-    GROUP BY a.attr_name, a.extra_kwargs, normalized_polling_rate
-    ORDER BY avg_net_profit DESC;
+    SELECT DISTINCT ON (ea.experiment_id, ea.player_index)
+      ea.experiment_id,
+      ea.player_index,
+      ea.attr_name,
+      ea.extra_kwargs,
+      ea.polling_rate as normalized_polling_rate,
+      ea.attr_name || (ea.player_index + 1) AS agent_name,
+      COALESCE(
+        (SELECT AVG(r2.final_balance - r2.initial_balance) 
+         FROM agents a2 
+         JOIN results r2 ON r2.player_id = a2.player_id
+         WHERE a2.experiment_id = ea.experiment_id 
+           AND a2.attr_name = ea.attr_name
+           AND a2.extra_kwargs::text = ea.extra_kwargs::text), 
+        0
+      ) AS avg_net_profit,
+      COALESCE(
+        (SELECT MIN(r2.final_balance - r2.initial_balance) 
+         FROM agents a2 
+         JOIN results r2 ON r2.player_id = a2.player_id
+         WHERE a2.experiment_id = ea.experiment_id 
+           AND a2.attr_name = ea.attr_name
+           AND a2.extra_kwargs::text = ea.extra_kwargs::text), 
+        0
+      ) AS min_net_profit,
+      COALESCE(
+        (SELECT MAX(r2.final_balance - r2.initial_balance) 
+         FROM agents a2 
+         JOIN results r2 ON r2.player_id = a2.player_id
+         WHERE a2.experiment_id = ea.experiment_id 
+           AND a2.attr_name = ea.attr_name
+           AND a2.extra_kwargs::text = ea.extra_kwargs::text), 
+        0
+      ) AS max_net_profit,
+      COALESCE(
+        (SELECT COUNT(*) 
+         FROM agents a2 
+         JOIN results r2 ON r2.player_id = a2.player_id
+         WHERE a2.experiment_id = ea.experiment_id 
+           AND a2.attr_name = ea.attr_name
+           AND a2.extra_kwargs::text = ea.extra_kwargs::text), 
+        0
+      ) as num_games
+    FROM experiment_agents AS ea
+    WHERE ea.experiment_id = %s
+    ORDER BY ea.player_index;
 """
 
 _FETCH_EXPERIMENT_STATS_SQL = """
@@ -241,6 +273,35 @@ class DashboardDataManager:
             return data.get('buy_ratio')
         except (ValueError, SyntaxError):
             return None
+    
+    def fetch_individual_profits(self, experiment_id: int) -> pd.DataFrame:
+        """Fetch individual game profits for box plot"""
+        try:
+            conn = get_connection()
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT
+                        ea.attr_name || (ea.player_index + 1) AS agent_name,
+                        ea.attr_name,
+                        ea.player_index,
+                        r.final_balance - r.initial_balance AS profit
+                    FROM experiment_agents AS ea
+                    JOIN agents AS a ON a.experiment_id = ea.experiment_id 
+                        AND a.attr_name = ea.attr_name
+                        AND a.extra_kwargs::text = ea.extra_kwargs::text
+                    JOIN results AS r ON r.player_id = a.player_id
+                    WHERE ea.experiment_id = %s
+                    ORDER BY ea.player_index, r.round_id;
+                """, (experiment_id,))
+                rows = cur.fetchall()
+                cols = [d[0] for d in cur.description]
+                df = pd.DataFrame(rows, columns=cols)
+            
+            return df
+            
+        except Exception as e:
+            print(f"Error fetching individual profits: {e}")
+            return pd.DataFrame()
 
 # Initialize data manager
 data_manager = DashboardDataManager()
@@ -394,7 +455,7 @@ app.layout = html.Div([
     dash_table.DataTable(
         id='results-table',
         columns=[
-                        {'name': 'Agent Type', 'id': 'attr_name'},
+                        {'name': 'Agent Name', 'id': 'agent_name'},
                         {'name': 'Config', 'id': 'extra_kwargs'},
                         {'name': 'Polling Rate', 'id': 'normalized_polling_rate'},
                         {'name': 'Games', 'id': 'num_games'},
@@ -498,17 +559,31 @@ def update_metrics_and_charts(selected_experiment, n_intervals):
         )
         return [], "", empty_fig
     
-    # Create profit chart
-    profit_fig = px.bar(
-        df, 
-        x='attr_name', 
-        y='avg_net_profit',
-        color='normalized_polling_rate',
-        title='Average Net Profit by Agent Type',
-        labels={'avg_net_profit': 'Average Net Profit', 'attr_name': 'Agent Type'},
-        color_continuous_scale='RdYlGn'
-    )
-    profit_fig.update_layout(height=400)
+    # Create profit box plot
+    profit_df = data_manager.fetch_individual_profits(selected_experiment)
+    
+    if profit_df.empty:
+        profit_fig = go.Figure().add_annotation(
+            text="No individual game data available for box plot",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False
+        )
+    else:
+        profit_fig = px.box(
+            profit_df, 
+            x='agent_name', 
+            y='profit',
+            title='Profit Distribution by Agent',
+            labels={'profit': 'Profit per Game', 'agent_name': 'Agent'},
+            color='agent_name',
+            points='outliers'  # Show outlier points
+        )
+        profit_fig.update_layout(
+            height=400,
+            showlegend=False,  # Hide legend since x-axis already shows agent names
+            xaxis_title="Agent",
+            yaxis_title="Profit per Game"
+        )
     
     # Removed games chart
     

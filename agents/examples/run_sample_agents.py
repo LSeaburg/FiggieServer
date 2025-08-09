@@ -1,8 +1,6 @@
 from typing import List
 from agents.dispatcher import AgentConfig, run_game
 
-EXPERIMENT_ID = 0
-
 FOUR_PLAYER_SERVER = "http://localhost:5050"
 FIVE_PLAYER_SERVER = "http://localhost:5051"
 
@@ -26,4 +24,4 @@ if __name__ == '__main__':
     else:
         raise ValueError(f"Expected 4 or 5 agents, got {len(AGENTS)}")
 
-    run_game(AGENTS, SERVER_URL, EXPERIMENT_ID)
+    run_game(AGENTS, SERVER_URL)
