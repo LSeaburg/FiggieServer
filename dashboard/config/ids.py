@@ -33,12 +33,12 @@ def agent_block_id(index: int) -> str:
     return f"agent-block-{index}"
 
 
-def agent_module_id(index: int) -> str:
-    return f"agent{index}_module"
+def agent_module_id(index: int) -> Dict[str, object]:
+    return {"type": "agent-module", "idx": index}
 
 
-def agent_polling_rate_id(index: int) -> str:
-    return f"agent{index}_polling_rate"
+def agent_polling_rate_id(index: int) -> Dict[str, object]:
+    return {"type": "agent-polling-rate", "idx": index}
 
 
 def agent_params_container_id(index: int) -> Dict[str, int]:

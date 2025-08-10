@@ -40,20 +40,24 @@ def register_action_callbacks(app: Dash, data_manager, module_to_attr: Dict[str,
         State(EXPERIMENT_NAME, 'value'),
         State(EXPERIMENT_DESCRIPTION, 'value'),
         State(NUM_PLAYERS, 'value'),
-        *[State(agent_module_id(i), 'value') for i in range(1, MAX_PLAYERS + 1)],
-        *[State(agent_polling_rate_id(i), 'value') for i in range(1, MAX_PLAYERS + 1)],
+        State({'type': 'agent-module', 'idx': ALL}, 'value'),
+        State({'type': 'agent-polling-rate', 'idx': ALL}, 'value'),
         State({'type': 'agent-param', 'idx': ALL, 'name': ALL}, 'value'),
         State({'type': 'agent-param', 'idx': ALL, 'name': ALL}, 'id'),
         prevent_initial_call=True,
     )
-    def save_experiment(n_clicks, name, description, num_players, *args):  # noqa: C901
+    def save_experiment(
+        n_clicks,
+        name,
+        description,
+        num_players,
+        modules,
+        polling_rates,
+        dyn_values,
+        dyn_ids,
+    ):
         if not name:
             return error("Experiment name is required")
-
-        modules = args[:MAX_PLAYERS]
-        polling_rates = args[MAX_PLAYERS: 2 * MAX_PLAYERS]
-        dyn_values = args[2 * MAX_PLAYERS] if len(args) > 2 * MAX_PLAYERS else []
-        dyn_ids = args[2 * MAX_PLAYERS + 1] if len(args) > 2 * MAX_PLAYERS + 1 else []
 
         mapping = dict(module_to_attr)
         errors: List[str] = []

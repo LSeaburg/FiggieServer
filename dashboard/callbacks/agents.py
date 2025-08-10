@@ -10,10 +10,8 @@ from dashboard.config.agent_specs import AgentSpec
 from dashboard.config import MIN_POLLING_RATE, MAX_PLAYERS, DEFAULT_POLLING_RATE
 from dashboard.config.ids import (
     NUM_PLAYERS,
-    AGENT_CONFIG_STORE,
     agent_block_id,
     agent_module_id,
-    agent_polling_rate_id,
     agent_params_container_id,
 )
 
@@ -67,48 +65,24 @@ def register_agent_callbacks(app: Dash, agent_specs: List[AgentSpec]):
             ),
         ], className="agent-param")
 
-    def create_agent_params_callback(agent_idx):
-        @app.callback(
-            Output(agent_params_container_id(agent_idx), 'children'),
-            [Input(agent_module_id(agent_idx), 'value'), Input(NUM_PLAYERS, 'value')],
-            [State({'type': 'agent-param', 'idx': agent_idx, 'name': ALL}, 'value'),
-             State({'type': 'agent-param', 'idx': agent_idx, 'name': ALL}, 'id')],
-            prevent_initial_call=False,
-        )
-        def render_single_agent_params(module_value, num_players, existing_values, existing_ids):  # noqa: F401
-            if agent_idx > (num_players or 0):
-                return []
-            params = get_params_for_module(agent_specs, module_value) if module_value else []
-            existing_param_values: Dict[str, Any] = {}
-            if existing_values and existing_ids:
-                for val, id_dict in zip(existing_values, existing_ids):
-                    if isinstance(id_dict, dict) and 'name' in id_dict:
-                        existing_param_values[id_dict['name']] = val
-            rendered = []
-            for p in params:
-                pname = p.get('name')
-                value = existing_param_values.get(pname, p.get('default'))
-                rendered.append(render_param_input(agent_idx, p, value))
-            return rendered
-        return render_single_agent_params
-
-    for i in range(1, MAX_PLAYERS + 1):
-        create_agent_params_callback(i)
-
     @app.callback(
-        Output(AGENT_CONFIG_STORE, 'data'),
-        Input(NUM_PLAYERS, 'value'),
-        State(AGENT_CONFIG_STORE, 'data'),
+        Output({'type': 'agent-params-container', 'idx': ALL}, 'children'),
+        Input({'type': 'agent-module', 'idx': ALL}, 'value'),
+        State(NUM_PLAYERS, 'value'),
+        prevent_initial_call=False,
     )
-    def initialize_agent_config_store(num_players, current_data):  # noqa: F401
-        if current_data and len(current_data) >= (num_players or 0):
-            return current_data
-        agent_data = []
-        for i in range(MAX_PLAYERS):
-            if current_data and i < len(current_data):
-                agent_data.append(current_data[i])
-            else:
-                agent_data.append({'module': None, 'polling_rate': DEFAULT_POLLING_RATE, 'extra_kwargs': ''})
-        return agent_data
+    def render_agent_params(module_values, num_players):
+        params_to_render = []
+        for i, module_value in enumerate(module_values):
+            agent_idx = i + 1
+            if agent_idx > (num_players or 0):
+                params_to_render.append([])
+                continue
+            
+            params = get_params_for_module(agent_specs, module_value) if module_value else []
+            rendered = [render_param_input(agent_idx, p, p.get('default')) for p in params]
+            params_to_render.append(rendered)
+            
+        return params_to_render
 
 

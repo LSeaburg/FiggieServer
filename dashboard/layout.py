@@ -17,7 +17,6 @@ from .config.ids import (
     INTERVAL,
 
     EXPERIMENT_STORE,
-    AGENT_CONFIG_STORE,
     NUM_PLAYERS,
     EXPERIMENT_NAME,
     EXPERIMENT_DESCRIPTION,
@@ -169,7 +168,6 @@ def build_app_layout(
         html.Div(id=METRICS_DATA, style={'display': 'none'}),
         dcc.Interval(id=INTERVAL, interval=REFRESH_INTERVAL, n_intervals=0, disabled=False),
         dcc.Store(id=EXPERIMENT_STORE),
-        dcc.Store(id=AGENT_CONFIG_STORE, data={}),
     ])
 
 
