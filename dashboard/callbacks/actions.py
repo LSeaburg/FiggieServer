@@ -10,9 +10,7 @@ from dash.dependencies import Input, Output, State, ALL
 from dashboard.config import FOUR_PLAYER_SERVER, FIVE_PLAYER_SERVER, MIN_POLLING_RATE, MAX_PLAYERS
 from dashboard.config.ids import (
     RUN_OUTPUT,
-    RUN_MESSAGE_TIMER,
     SAVE_OUTPUT,
-    SAVE_MESSAGE_TIMER,
     RUN_BUTTON,
     SAVE_BUTTON,
     EXPERIMENT_DROPDOWN,
@@ -36,27 +34,8 @@ from dashboard.components.messages import success, error, error_list
 def register_action_callbacks(app: Dash, data_manager, module_to_attr: Dict[str, str], agent_specs: List[AgentSpec]):
     logger = logging.getLogger(__name__)
 
-    # Auto-clear messages
     @app.callback(
-        Output(RUN_OUTPUT, 'children', allow_duplicate=True),
-        Output(RUN_MESSAGE_TIMER, 'disabled', allow_duplicate=True),
-        Input(RUN_MESSAGE_TIMER, 'n_intervals'),
-        prevent_initial_call=True,
-    )
-    def clear_run_message(n_intervals):  # noqa: F401
-        return "", True
-
-    @app.callback(
-        Output(SAVE_OUTPUT, 'children', allow_duplicate=True),
-        Output(SAVE_MESSAGE_TIMER, 'disabled', allow_duplicate=True),
-        Input(SAVE_MESSAGE_TIMER, 'n_intervals'),
-        prevent_initial_call=True,
-    )
-    def clear_save_message(n_intervals):  # noqa: F401
-        return "", True
-
-    @app.callback(
-        [Output(SAVE_OUTPUT, 'children'), Output(SAVE_MESSAGE_TIMER, 'disabled')],
+        Output(SAVE_OUTPUT, 'children'),
         Input(SAVE_BUTTON, 'n_clicks'),
         State(EXPERIMENT_NAME, 'value'),
         State(EXPERIMENT_DESCRIPTION, 'value'),
@@ -65,12 +44,11 @@ def register_action_callbacks(app: Dash, data_manager, module_to_attr: Dict[str,
         *[State(agent_polling_rate_id(i), 'value') for i in range(1, MAX_PLAYERS + 1)],
         State({'type': 'agent-param', 'idx': ALL, 'name': ALL}, 'value'),
         State({'type': 'agent-param', 'idx': ALL, 'name': ALL}, 'id'),
+        prevent_initial_call=True,
     )
     def save_experiment(n_clicks, name, description, num_players, *args):  # noqa: C901
-        if not n_clicks:
-            return "", True
         if not name:
-            return error("Experiment name is required"), True
+            return error("Experiment name is required")
 
         modules = args[:MAX_PLAYERS]
         polling_rates = args[MAX_PLAYERS: 2 * MAX_PLAYERS]
@@ -129,41 +107,40 @@ def register_action_callbacks(app: Dash, data_manager, module_to_attr: Dict[str,
                 validated_agents.append((module, attr_name, float(pr_val), extra_kwargs))
 
         if errors:
-            return error_list("Invalid configuration. Please fix the following:", errors), True
+            return error_list("Invalid configuration. Please fix the following:", errors)
 
         try:
             exp_id = create_experiment(name, description, validated_agents)
-            return success(f"Saved experiment {exp_id}: {name} with {num_players} configured agents"), False
+            return success(f"Saved experiment {exp_id}: {name} with {num_players} configured agents")
         except Exception as e:
             logger.exception("Error saving experiment")
-            return error(f"Error saving experiment: {str(e)}"), False
+            return error(f"Error saving experiment: {str(e)}")
 
     @app.callback(
-        [Output(RUN_OUTPUT, 'children'), Output(RUN_MESSAGE_TIMER, 'disabled')],
+        Output(RUN_OUTPUT, 'children'),
         Input(RUN_BUTTON, 'n_clicks'),
         State(EXPERIMENT_DROPDOWN, 'value'),
+        prevent_initial_call=True,
     )
     def run_experiment_callback(n_clicks, exp_id):  # noqa: F401
-        if not n_clicks:
-            return "", True
         if not exp_id:
-            return error("Select an experiment to run"), True
+            return error("Select an experiment to run")
         try:
             rows = get_experiment_agents(exp_id)
             if not rows:
-                return error("No agents found for this experiment"), False
+                return error("No agents found for this experiment")
 
             agents = build_agent_configs(rows)
             server_url = FOUR_PLAYER_SERVER if len(agents) == 4 else FIVE_PLAYER_SERVER
             try:
                 ensure_server_ready(server_url)
             except PreflightError as exc:
-                return error(str(exc)), False
+                return error(str(exc))
 
             run_experiment_async(agents, server_url, exp_id)
-            return success(f"Running experiment {exp_id} with {len(agents)} agents..."), False
+            return success(f"Running experiment {exp_id} with {len(agents)} agents...")
         except Exception as e:
             logger.exception("Error preparing to run experiment")
-            return error(f"Error running experiment: {str(e)}"), False
+            return error(f"Error running experiment: {str(e)}")
 
 

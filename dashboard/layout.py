@@ -1,7 +1,7 @@
 from typing import Any, Dict, List
 from dash import dcc, html, dash_table
 
-from .config import REFRESH_INTERVAL, MIN_POLLING_RATE, MAX_PLAYERS, MESSAGE_HIDE_INTERVAL_MS, DEFAULT_POLLING_RATE
+from .config import REFRESH_INTERVAL, MIN_POLLING_RATE, MAX_PLAYERS, DEFAULT_POLLING_RATE
 from .config.ids import (
     EXPERIMENT_DROPDOWN,
     EXPERIMENT_INFO,
@@ -15,8 +15,7 @@ from .config.ids import (
     SAVE_OUTPUT,
     LAST_UPDATED,
     INTERVAL,
-    RUN_MESSAGE_TIMER,
-    SAVE_MESSAGE_TIMER,
+
     EXPERIMENT_STORE,
     AGENT_CONFIG_STORE,
     NUM_PLAYERS,
@@ -169,8 +168,6 @@ def build_app_layout(
         html.Div(id=EXPERIMENTS_DATA, style={'display': 'none'}),
         html.Div(id=METRICS_DATA, style={'display': 'none'}),
         dcc.Interval(id=INTERVAL, interval=REFRESH_INTERVAL, n_intervals=0, disabled=False),
-        dcc.Interval(id=RUN_MESSAGE_TIMER, interval=MESSAGE_HIDE_INTERVAL_MS, n_intervals=0, disabled=True),
-        dcc.Interval(id=SAVE_MESSAGE_TIMER, interval=MESSAGE_HIDE_INTERVAL_MS, n_intervals=0, disabled=True),
         dcc.Store(id=EXPERIMENT_STORE),
         dcc.Store(id=AGENT_CONFIG_STORE, data={}),
     ])

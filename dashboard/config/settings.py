@@ -12,6 +12,6 @@ REFRESH_INTERVAL = 5000  # milliseconds
 # Dashboard behavior
 MAX_PLAYERS = 5
 EXPERIMENTS_CACHE_TTL = 5  # seconds
-MESSAGE_HIDE_INTERVAL_MS = 3000
+
 
 

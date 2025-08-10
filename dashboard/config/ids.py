@@ -15,11 +15,9 @@ PROFIT_CHART = "profit-chart"
 
 RUN_BUTTON = "run-button"
 RUN_OUTPUT = "run-output"
-RUN_MESSAGE_TIMER = "run-message-timer"
 
 SAVE_BUTTON = "save-button"
 SAVE_OUTPUT = "save-output"
-SAVE_MESSAGE_TIMER = "save-message-timer"
 
 EXPERIMENT_NAME = "experiment-name"
 EXPERIMENT_DESCRIPTION = "experiment-description"

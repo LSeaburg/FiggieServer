@@ -6,7 +6,7 @@ from .settings import (
     REFRESH_INTERVAL,
     MAX_PLAYERS,
     EXPERIMENTS_CACHE_TTL,
-    MESSAGE_HIDE_INTERVAL_MS,
+
 )
 
 # Intentionally do not wildcard-export ids/specs to keep explicit imports in callers
@@ -19,7 +19,7 @@ __all__ = [
     "REFRESH_INTERVAL",
     "MAX_PLAYERS",
     "EXPERIMENTS_CACHE_TTL",
-    "MESSAGE_HIDE_INTERVAL_MS",
+
 ]
 
 
