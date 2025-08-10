@@ -6,20 +6,28 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 
 from figgie_server.db import get_connection
-from .sql import (
+from ..config.settings import EXPERIMENTS_CACHE_TTL
+from .queries import (
     FETCH_EXPERIMENT_STATS_SQL,
     FETCH_AGENT_STATS_SQL,
     FETCH_INDIVIDUAL_PROFITS_SQL,
 )
+from .metrics import (
+    list_experiments as svc_list_experiments,
+    fetch_metrics_df as svc_fetch_metrics_df,
+    fetch_individual_profits_df as svc_fetch_individual_profits_df,
+    fetch_results_bundle as svc_fetch_results_bundle,
+)
 
-class DashboardDataManager:
+class DataService:
     """Manages data fetching and caching for the dashboard"""
 
     def __init__(self) -> None:
         self._logger = logging.getLogger(__name__)
         self._experiments_cache: Optional[List[Dict[str, Any]]] = None
         self._last_experiments_update: float = 0
-        self._cache_ttl: int = 5  # seconds
+        self._cache_ttl: int = EXPERIMENTS_CACHE_TTL
+        self._metrics_cache: Dict[int, Dict[str, Any]] = {}
 
     def fetch_experiments(self, force_refresh: bool = False) -> List[Dict[str, Any]]:
         current_time = time.time()
@@ -31,26 +39,7 @@ class DashboardDataManager:
             return self._experiments_cache
 
         try:
-            conn = get_connection()
-            with conn.cursor() as cur:
-                cur.execute(FETCH_EXPERIMENT_STATS_SQL)
-                rows = cur.fetchall()
-
-            experiments: List[Dict[str, Any]] = []
-            for row in rows:
-                exp_id, name, description, created_at, total_games, configured_agents = row
-                experiments.append(
-                    {
-                        "label": f"{exp_id}: {name} ({total_games} games, {configured_agents} agents)",
-                        "value": exp_id,
-                        "name": name,
-                        "description": description,
-                        "created_at": created_at.isoformat() if created_at else None,
-                        "total_games": total_games or 0,
-                        "configured_agents": configured_agents or 0,
-                    }
-                )
-
+            experiments = svc_list_experiments()
             self._experiments_cache = experiments
             self._last_experiments_update = current_time
             return experiments
@@ -60,13 +49,12 @@ class DashboardDataManager:
 
     def fetch_metrics(self, experiment_id: int) -> pd.DataFrame:
         try:
-            conn = get_connection()
-            with conn.cursor() as cur:
-                cur.execute(FETCH_AGENT_STATS_SQL, (experiment_id,))
-                rows = cur.fetchall()
-                cols = [d[0] for d in cur.description]
-                df = pd.DataFrame(rows, columns=cols)
-
+            cached = self._metrics_cache.get(experiment_id)
+            if cached and (time.time() - cached.get("ts", 0) < 2):
+                df = cached["metrics"].copy()
+            else:
+                df, profits = svc_fetch_results_bundle(experiment_id)
+                self._metrics_cache[experiment_id] = {"metrics": df.copy(), "profits": profits.copy(), "ts": time.time()}
             # Ensure DataTable-friendly types
             if not df.empty and "extra_kwargs" in df.columns:
                 def _to_str(val: Any) -> str:
@@ -87,15 +75,13 @@ class DashboardDataManager:
 
     def fetch_individual_profits(self, experiment_id: int) -> pd.DataFrame:
         try:
-            conn = get_connection()
-            with conn.cursor() as cur:
-                cur.execute(FETCH_INDIVIDUAL_PROFITS_SQL, (experiment_id,))
-                rows = cur.fetchall()
-                cols = [d[0] for d in cur.description]
-                df = pd.DataFrame(rows, columns=cols)
-            return df
+            cached = self._metrics_cache.get(experiment_id)
+            if cached and (time.time() - cached.get("ts", 0) < 2):
+                return cached["profits"].copy()
+            # If not cached, fetch both to populate cache
+            df_metrics, df_profits = svc_fetch_results_bundle(experiment_id)
+            self._metrics_cache[experiment_id] = {"metrics": df_metrics.copy(), "profits": df_profits.copy(), "ts": time.time()}
+            return df_profits
         except Exception:
             self._logger.exception("Error fetching individual profits for experiment_id=%s", experiment_id)
             return pd.DataFrame()
-
-

@@ -2,8 +2,8 @@ from typing import List, Tuple
 
 from dash import Dash
 
-from dashboard.agent_specs import load_agent_specs
-from dashboard.data import DashboardDataManager
+from dashboard.config.agent_specs import load_agent_specs
+from dashboard.services import DataService
 from dashboard.layout import build_app_layout
 from dashboard.callbacks import register_callbacks
 
@@ -11,8 +11,8 @@ from dashboard.callbacks import register_callbacks
 # Load agent specs and derived data
 AGENT_SPECS, MODULE_TO_ATTR = load_agent_specs()
 
-# Initialize data manager and app
-data_manager = DashboardDataManager()
+# Initialize data service and app
+data_manager = DataService()
 app = Dash(
     __name__,
     external_stylesheets=['https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'],

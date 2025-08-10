@@ -1,8 +1,33 @@
 from typing import Any, Dict, List
 from dash import dcc, html, dash_table
 
-from .config import REFRESH_INTERVAL, MIN_POLLING_RATE
-from .agent_specs import AgentSpec
+from .config import REFRESH_INTERVAL, MIN_POLLING_RATE, MAX_PLAYERS, MESSAGE_HIDE_INTERVAL_MS, DEFAULT_POLLING_RATE
+from .config.ids import (
+    EXPERIMENT_DROPDOWN,
+    EXPERIMENT_INFO,
+    EXPERIMENTS_DATA,
+    METRICS_DATA,
+    RESULTS_TABLE,
+    PROFIT_CHART,
+    RUN_BUTTON,
+    RUN_OUTPUT,
+    SAVE_BUTTON,
+    SAVE_OUTPUT,
+    LAST_UPDATED,
+    INTERVAL,
+    RUN_MESSAGE_TIMER,
+    SAVE_MESSAGE_TIMER,
+    EXPERIMENT_STORE,
+    AGENT_CONFIG_STORE,
+    NUM_PLAYERS,
+    EXPERIMENT_NAME,
+    EXPERIMENT_DESCRIPTION,
+    agent_block_id,
+    agent_module_id,
+    agent_polling_rate_id,
+    agent_params_container_id,
+)
+from .config.agent_specs import AgentSpec
 
 
 def build_app_layout(
@@ -18,7 +43,7 @@ def build_app_layout(
                 "Figgie Experiment Dashboard",
             ], className="dashboard-header"),
             html.Div([
-                html.Div(id="last-updated", className="last-updated"),
+                html.Div(id=LAST_UPDATED, className="last-updated"),
             ], className="header-controls"),
         ], className="header-container"),
 
@@ -27,25 +52,25 @@ def build_app_layout(
                 html.Div([
                     html.H3("Select Experiment", className="section-title"),
                     dcc.Dropdown(
-                        id='experiment-dropdown',
+                        id=EXPERIMENT_DROPDOWN,
                         options=[{'label': exp['label'], 'value': exp['value']} for exp in fetch_experiments_initial],
                         value=None,
                         placeholder='Select experiment to view or run',
                         clearable=False,
                         className="experiment-dropdown",
                     ),
-                    html.Div(id="experiment-info", className="experiment-info"),
+                    html.Div(id=EXPERIMENT_INFO, className="experiment-info"),
                 ], className="section"),
 
                 html.Div([
                     html.H3("Experiment Results", className="section-title"),
                     html.Div([
-                        html.Button("Run Experiment", id='run-button', n_clicks=0, className="btn btn-success"),
+                        html.Button("Run Experiment", id=RUN_BUTTON, n_clicks=0, className="btn btn-success"),
                         html.Span(f"Auto-refresh every {REFRESH_INTERVAL // 1000} seconds", className="auto-refresh-note"),
                     ], className="table-controls"),
-                    html.Div(id='run-output', className="output-message"),
+                    html.Div(id=RUN_OUTPUT, className="output-message"),
                     dash_table.DataTable(
-                        id='results-table',
+                        id=RESULTS_TABLE,
                         columns=[
                             {'name': 'Agent Name', 'id': 'agent_name'},
                             {'name': 'Config', 'id': 'extra_kwargs'},
@@ -54,6 +79,8 @@ def build_app_layout(
                         ],
                         data=[],
                         page_size=10,
+                        virtualization=True,
+                        fixed_rows={'headers': True},
                         style_table={'overflowX': 'auto', 'borderRadius': '12px', 'overflow': 'hidden', 'boxShadow': '0 4px 15px rgba(0, 0, 0, 0.1)'},
                         style_cell={'textAlign': 'center'},
                         style_header={'backgroundColor': '#2c3e50', 'color': 'white', 'fontWeight': 'bold'},
@@ -63,7 +90,7 @@ def build_app_layout(
 
                 html.Div([
                     html.H3("Performance Charts", className="section-title"),
-                    dcc.Graph(id='profit-chart', className="chart"),
+                    dcc.Graph(id=PROFIT_CHART, className="chart"),
                 ], className="section"),
             ], className="left-panel"),
 
@@ -72,15 +99,15 @@ def build_app_layout(
                     html.H3("Create New Experiment", className="section-title"),
                     html.Div([
                         html.Label("Experiment Name"),
-                        dcc.Input(id='experiment-name', type='text', value='', placeholder='Enter experiment name', className="input-field"),
+                        dcc.Input(id=EXPERIMENT_NAME, type='text', value='', placeholder='Enter experiment name', className="input-field"),
                         html.Label("Description"),
-                        dcc.Textarea(id='experiment-description', value='', placeholder='Enter experiment description', className="textarea-field"),
+                        dcc.Textarea(id=EXPERIMENT_DESCRIPTION, value='', placeholder='Enter experiment description', className="textarea-field"),
                     ], className="form-group"),
 
                     html.Div([
                         html.Label("Number of Players"),
                         dcc.RadioItems(
-                            id='num-players',
+                            id=NUM_PLAYERS,
                             options=[{'label': '4 Players', 'value': 4}, {'label': '5 Players', 'value': 5}],
                             value=4,
                             inline=True,
@@ -101,7 +128,7 @@ def build_app_layout(
                                             html.Div([
                                                 html.Label("Agent Type"),
                                                 dcc.Dropdown(
-                                                    id=f'agent{i}_module',
+                                                    id=agent_module_id(i),
                                                     options=traders_options,
                                                     value=default_module,
                                                     clearable=False,
@@ -111,9 +138,9 @@ def build_app_layout(
                                             html.Div([
                                                 html.Label("Polling Rate"),
                                                 dcc.Input(
-                                                    id=f'agent{i}_polling_rate',
+                                                    id=agent_polling_rate_id(i),
                                                     type='number',
-                                                    value=0.25,
+                                                    value=DEFAULT_POLLING_RATE,
                                                     step=0.01,
                                                     min=MIN_POLLING_RATE,
                                                     className="agent-input",
@@ -121,31 +148,31 @@ def build_app_layout(
                                             ], className="agent-config-section"),
                                         ], className="agent-config-row"),
                                         html.Div([
-                                            html.Div(id={"type": "agent-params-container", "idx": i}, className="agent-params-container"),
+                                            html.Div(id=agent_params_container_id(i), className="agent-params-container"),
                                         ], className="agent-config-section"),
                                     ], className="agent-config"),
-                                ], id=f'agent-block-{i}', className="agent-block", style={'display': 'block' if i <= 4 else 'none'})
-                                for i in range(1, 6)
+                                ], id=agent_block_id(i), className="agent-block", style={'display': 'block' if i <= 4 else 'none'})
+                                for i in range(1, MAX_PLAYERS + 1)
                             ],
                         ),
                     ], className="form-group"),
 
                     html.Div([
-                        html.Button("Save Experiment", id='save-button', n_clicks=0, className="btn btn-primary"),
+                        html.Button("Save Experiment", id=SAVE_BUTTON, n_clicks=0, className="btn btn-primary"),
                     ], className="button-group"),
 
-                    html.Div(id='save-output', className="output-message"),
+                    html.Div(id=SAVE_OUTPUT, className="output-message"),
                 ], className="section"),
             ], className="right-panel"),
         ], className="main-container"),
 
-        html.Div(id='experiments-data', style={'display': 'none'}),
-        html.Div(id='metrics-data', style={'display': 'none'}),
-        dcc.Interval(id='interval-component', interval=REFRESH_INTERVAL, n_intervals=0, disabled=False),
-        dcc.Interval(id='run-message-timer', interval=3000, n_intervals=0, disabled=True),
-        dcc.Interval(id='save-message-timer', interval=3000, n_intervals=0, disabled=True),
-        dcc.Store(id='experiment-store'),
-        dcc.Store(id='agent-config-store', data={}),
+        html.Div(id=EXPERIMENTS_DATA, style={'display': 'none'}),
+        html.Div(id=METRICS_DATA, style={'display': 'none'}),
+        dcc.Interval(id=INTERVAL, interval=REFRESH_INTERVAL, n_intervals=0, disabled=False),
+        dcc.Interval(id=RUN_MESSAGE_TIMER, interval=MESSAGE_HIDE_INTERVAL_MS, n_intervals=0, disabled=True),
+        dcc.Interval(id=SAVE_MESSAGE_TIMER, interval=MESSAGE_HIDE_INTERVAL_MS, n_intervals=0, disabled=True),
+        dcc.Store(id=EXPERIMENT_STORE),
+        dcc.Store(id=AGENT_CONFIG_STORE, data={}),
     ])
 
 

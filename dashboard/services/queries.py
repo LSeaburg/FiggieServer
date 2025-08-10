@@ -50,3 +50,5 @@ FETCH_INDIVIDUAL_PROFITS_SQL = """
     WHERE ea.experiment_id = %s
     ORDER BY ea.player_index, r.round_id;
 """
+
+

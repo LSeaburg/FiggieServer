@@ -5,8 +5,8 @@ A modern, responsive web dashboard for managing and analyzing Figgie trading exp
 ## Features
 
 ### 🚀 **Real-time Updates**
-- **Auto-refresh**: Data automatically updates every 2 seconds
-- **Live experiment list**: New experiments appear immediately when created
+- **Auto-refresh**: Data automatically updates every 5 seconds
+- **Live experiment list**: New experiments appear shortly after being created
 - **Real-time metrics**: Results update as games are running
 
 ### 📊 **Enhanced Analytics**
@@ -25,7 +25,7 @@ A modern, responsive web dashboard for managing and analyzing Figgie trading exp
 - **Data caching**: Efficient data fetching with smart caching
 - **Background processing**: Games run in background threads
 - **Form validation**: Input validation and user feedback
-- **Agent configuration**: Proper saving of all agent settings including JSON configuration
+- **Agent configuration**: Proper saving of all agent settings including validated params
 
 ## Usage
 
@@ -43,7 +43,7 @@ The dashboard will be available at `http://localhost:8050`
 3. Configure each agent:
    - Choose agent type (Fundamentalist, NoiseTrader, BottomFeeder)
    - Set polling rate
-   - Add extra configuration as JSON (e.g., `{"buy_ratio": 1.2}`)
+   - Fill in agent-specific parameters (validated and coerced)
 4. Click "Save Experiment"
 
 **Note**: The agent configuration form now properly saves all settings including the Extra Configuration JSON to the database. Values are collected via an intermediate data store to avoid callback conflicts.
@@ -59,32 +59,75 @@ The dashboard will be available at `http://localhost:8050`
 - **Performance Charts**: Visual representation of agent performance
 - **Experiment Info**: Summary statistics and metadata
 
-## Technical Improvements
+## Architecture
 
 ### Code Organization
-- **DataManager class**: Centralized data fetching with caching
-- **Modular callbacks**: Separated concerns for better maintainability
-- **Error handling**: Comprehensive try-catch blocks
-- **Type hints**: Full type annotations for better code quality
 
-### Performance
-- **Smart caching**: 5-second cache for experiment list
-- **Efficient queries**: Optimized SQL with proper indexing
-- **Background processing**: Non-blocking game execution
+The dashboard follows a modular architecture with clear separation of concerns:
+
+```
+dashboard/
+├── app.py                    # Main application entry point
+├── layout.py                 # UI layout components
+├── components/               # Reusable UI components
+│   ├── charts.py            # Plotly figure builders
+│   ├── messages.py          # HTML message helpers
+│   └── utils.py             # UI utility functions
+├── config/                   # Configuration and constants
+│   ├── settings.py          # General settings and env vars
+│   ├── ids.py               # Component ID constants
+│   └── agent_specs.py       # Agent specification dataclasses
+├── services/                 # Business logic and data access
+│   ├── data.py              # DataService (caching + data fetching)
+│   ├── metrics.py           # Database read operations
+│   ├── experiments.py       # Database write operations
+│   ├── runner.py            # Game execution orchestration
+│   └── queries.py           # Raw SQL queries
+├── callbacks/                # Dash callback modules
+│   ├── experiments.py       # Experiment list/info callbacks
+│   ├── results.py           # Results table/charts callbacks
+│   ├── agents.py            # Agent configuration callbacks
+│   └── actions.py           # Save/run action callbacks
+└── assets/                   # Static assets (CSS, etc.)
+```
+
+### Key Components
+
+- **`DataService`**: Provides caching and delegates to services for data operations
+- **`AgentSpec`/`ParamSpec`**: Loaded via dataclasses with validation, then exposed as dicts
+- **Modular callbacks**: Organized by domain (experiments, results, agents, actions)
+- **Service layer**: Separates business logic from UI concerns
+- **Component library**: Reusable UI elements (charts, messages, utils)
+
+### Performance Optimizations
+
+- **Smart caching**: 5-second cache for experiment list, 2-second cache for metrics
+- **Efficient queries**: Optimized SQL with proper indexing and bundled queries
+- **Background processing**: Non-blocking game execution in daemon threads
 - **Lazy loading**: Data loaded only when needed
 - **Dynamic component handling**: `suppress_callback_exceptions=True` for graceful handling of dynamically created components
+- **DataTable virtualization**: Enabled for better performance with large datasets
 
 ### User Experience
+
 - **Loading states**: Visual feedback during operations
 - **Auto-refresh**: No manual refresh needed
 - **Responsive design**: Works on all screen sizes
 - **Accessibility**: Proper focus states and keyboard navigation
+- **Consistent messaging**: Standardized success/error message components
 
 ## Configuration
 
 ### Environment Variables
 - `FIGGIE_SERVER_4P_URL`: URL for 4-player server (default: http://localhost:5050)
 - `FIGGIE_SERVER_5P_URL`: URL for 5-player server (default: http://localhost:5051)
+
+### Settings
+- `REFRESH_INTERVAL`: Dashboard refresh rate in milliseconds (default: 5000)
+- `DEFAULT_POLLING_RATE`: Default agent polling rate (default: 0.25)
+- `MAX_PLAYERS`: Maximum number of players per experiment (default: 5)
+- `EXPERIMENTS_CACHE_TTL`: Cache TTL for experiment list in seconds (default: 5)
+- `MESSAGE_HIDE_INTERVAL_MS`: Auto-hide interval for messages in milliseconds (default: 5000)
 
 ### Database
 The dashboard connects to the same PostgreSQL database as the Figgie server. Make sure the database is running and accessible.
@@ -129,11 +172,26 @@ Run with debug enabled for detailed error messages:
 python app.py --debug
 ```
 
+## Development
+
+### Running Tests
+```bash
+pytest tests/test_dashboard.py -v
+```
+
+### Code Style
+The project follows PEP 8 with a max line length of 100 characters.
+
+### Adding New Features
+1. **UI Components**: Add to `dashboard/components/`
+2. **Configuration**: Add to `dashboard/config/`
+3. **Business Logic**: Add to `dashboard/services/`
+4. **Callbacks**: Add to appropriate module in `dashboard/callbacks/`
+
 ## Future Enhancements
 
 - [ ] Real-time game monitoring with WebSocket updates
 - [ ] Advanced filtering and search for experiments
 - [ ] Comparative analysis between experiments
-- [ ] Agent performance trends over time
-- [ ] Export to additional formats (Excel, JSON)
-- [ ] User authentication and experiment sharing
+- [ ] Export functionality for experiment configurations
+- [ ] Agent performance benchmarking tools
