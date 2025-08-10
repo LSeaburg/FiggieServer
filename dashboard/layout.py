@@ -80,9 +80,21 @@ def build_app_layout(
                         virtualization=True,
                         fixed_rows={'headers': True},
                         style_table={'overflowX': 'auto', 'borderRadius': '12px', 'overflow': 'hidden', 'boxShadow': '0 4px 15px rgba(0, 0, 0, 0.1)'},
-                        style_cell={'textAlign': 'center'},
-                        style_header={'backgroundColor': '#2c3e50', 'color': 'white', 'fontWeight': 'bold'},
+                        style_cell={'textAlign': 'center', 'padding': '10px'},
+                        style_header={
+                            'backgroundColor': '#2c3e50',
+                            'color': 'white',
+                            'fontWeight': 'bold',
+                            'whiteSpace': 'normal',
+                            'height': 'auto',
+                        },
                         style_data_conditional=[{'if': {'row_index': 'odd'}, 'backgroundColor': '#f8f9fa'}],
+                        style_cell_conditional=[
+                            {'if': {'column_id': 'agent_name'}, 'width': '20%', 'fontWeight': 'bold'},
+                            {'if': {'column_id': 'extra_kwargs'}, 'width': '50%'},
+                            {'if': {'column_id': 'normalized_polling_rate'}, 'width': '15%'},
+                            {'if': {'column_id': 'num_games'}, 'width': '15%'},
+                        ]
                     ),
                 ], className="section"),
 
