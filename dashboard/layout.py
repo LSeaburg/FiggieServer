@@ -63,7 +63,7 @@ def build_app_layout(
                 html.Div([
                     html.H3("Experiment Results", className="section-title"),
                     html.Div([
-                        html.Button("Run Experiment", id=RUN_BUTTON, n_clicks=0, className="btn btn-success"),
+                        html.Button("Run Experiment", id=RUN_BUTTON, n_clicks=0, className="btn btn-primary"),
                         html.Span(f"Auto-refresh every {REFRESH_INTERVAL // 1000} seconds", className="auto-refresh-note"),
                     ], className="table-controls"),
                     html.Div(id=RUN_OUTPUT, className="output-message"),
