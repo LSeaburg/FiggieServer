@@ -59,7 +59,7 @@ class BottomFeeder(FiggieInterface):
         look_depth: int = 4
     ) -> None:
         """
-        Initialize the Fundamentalist agent.
+        Initialize the Bottom Feeder agent.
 
         Args:
             server_url: URL of the Figgie server.

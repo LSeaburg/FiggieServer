@@ -2,31 +2,6 @@
 
 A modern, responsive web dashboard for managing and analyzing Figgie trading experiments.
 
-## Features
-
-### 🚀 **Real-time Updates**
-- **Auto-refresh**: Data automatically updates every 5 seconds
-- **Live experiment list**: New experiments appear shortly after being created
-- **Real-time metrics**: Results update as games are running
-
-### 📊 **Enhanced Analytics**
-- **Interactive charts**: Visualize agent performance with Plotly charts
-- **Comprehensive metrics**: Average, min, max profits with game counts
-- **Export functionality**: Download results as CSV files
-
-### 🎨 **Modern UI/UX**
-- **Responsive design**: Works on desktop, tablet, and mobile
-- **Modern styling**: Glassmorphism design with smooth animations
-- **Intuitive layout**: Two-panel design for easy navigation
-- **Visual feedback**: Clear success/error messages with icons
-
-### 🔧 **Improved Functionality**
-- **Better error handling**: Comprehensive error messages and validation
-- **Data caching**: Efficient data fetching with smart caching
-- **Background processing**: Games run in background threads
-- **Form validation**: Input validation and user feedback
-- **Agent configuration**: Proper saving of all agent settings including validated params
-
 ## Usage
 
 ### Starting the Dashboard
@@ -46,13 +21,13 @@ The dashboard will be available at `http://localhost:8050`
    - Fill in agent-specific parameters (validated and coerced)
 4. Click "Save Experiment"
 
-**Note**: The agent configuration form now properly saves all settings including the Extra Configuration JSON to the database. Values are collected via an intermediate data store to avoid callback conflicts.
+**Note**: The agent configuration form saves all settings including the Extra Configuration JSON to the database. Values are collected via an intermediate data store to avoid callback conflicts.
 
 ### Running Experiments
 1. Select an existing experiment from the dropdown
 2. Click "Run Experiment"
 3. The game will start in the background
-4. Results will appear automatically as the game progresses
+4. Results will appear automatically once the game completes
 
 ### Viewing Results
 - **Metrics Table**: Shows detailed performance data for each agent
@@ -139,23 +114,6 @@ The dashboard connects to the same PostgreSQL database as the Figgie server. Mak
 - **Pandas**: Data manipulation and analysis
 - **Psycopg**: PostgreSQL adapter for Python
 
-## Browser Support
-
-- Chrome/Chromium (recommended)
-- Firefox
-- Safari
-- Edge
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Dashboard not loading**: Check if the database is running and accessible
-2. **Experiments not appearing**: Verify database connection and table structure
-3. **Games not running**: Ensure Figgie servers are running on the correct ports
-4. **Charts not displaying**: Check browser console for JavaScript errors
-5. **Dropdown errors**: Ensure database datetime fields are properly formatted
-
 ### Error Messages
 
 - **"Invalid argument options passed into Dropdown"**: This was fixed in the latest version. The dropdown now properly formats options with only `label` and `value` properties.
@@ -178,15 +136,6 @@ python app.py --debug
 ```bash
 pytest tests/test_dashboard.py -v
 ```
-
-### Code Style
-The project follows PEP 8 with a max line length of 100 characters.
-
-### Adding New Features
-1. **UI Components**: Add to `dashboard/components/`
-2. **Configuration**: Add to `dashboard/config/`
-3. **Business Logic**: Add to `dashboard/services/`
-4. **Callbacks**: Add to appropriate module in `dashboard/callbacks/`
 
 ## Future Enhancements
 
