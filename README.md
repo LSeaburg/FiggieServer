@@ -46,7 +46,7 @@ Official Figgie implementation: https://www.figgie.com
    ```shell
    docker compose up --build
    ```
-   Add `-d` to start in the background
+   Optionally add `-d` to start in the background
 
 3. Go to `http://localhost:8050` to view the dashboard
 
@@ -73,7 +73,7 @@ Official Figgie implementation: https://www.figgie.com
    ```shell
    docker compose up --build
    ```
-   Add `-d` to start in the background
+   Optionally add `-d` to start in the background
 
 5. Configure and run games manually by editing `agents/examples/run_sample_agents.py`. Execute
    ```shell
@@ -81,8 +81,10 @@ Official Figgie implementation: https://www.figgie.com
    ```
    to simulate a game.
 
-6. Follow the examples inside 'agents/traders/' and make your own agent profile.
+6. Follow the examples inside `agents/traders/` and make your own agent profile.
    Add an entry to  `agents/traders.yaml` so it appears in the dashboard.
+
+7. Go to `http://localhost:8050` to view the dashboard
 
 ---
 
@@ -90,8 +92,15 @@ Official Figgie implementation: https://www.figgie.com
 
 The dashboard is based around the idea of experiments - a set of agents to repeatedly play against each other.
 
-4 or 5 players can be configured to play against each other.  
-If they play against each other multiple times their average profits will be tracked and compared.
+4 or 5 players can be configured to play against each other.
+
+When multiple games of the experiment are simulated agents' average profits will be tracked and compared.
+
+The polling rate defined in the agent configuration is the 'normalized polling rate', the rate it would be in a 240 second game. During simulation this rate will be adjusted if the server's `TRADING_DURATION` is not 240 seconds.
+
+Note: Results from agents with the EXACT same parameters will be combined.
+
+Currently only results between configured agents in the same experiment can be compared against each other. This is to avoid complication when agents perform differently in different environments.
 
 ---
 
