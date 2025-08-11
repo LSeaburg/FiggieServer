@@ -6,14 +6,14 @@ FETCH_AGENT_STATS_SQL = """
       ea.extra_kwargs,
       ea.polling_rate as normalized_polling_rate,
       ea.attr_name || (ea.player_index + 1) AS agent_name,
-      COALESCE(
-        (SELECT COUNT(*) 
-         FROM agents a2 
-         JOIN results r2 ON r2.player_id = a2.player_id
-         WHERE a2.experiment_id = ea.experiment_id 
-           AND a2.attr_name = ea.attr_name
-           AND a2.extra_kwargs::text = ea.extra_kwargs::text), 
-        0
+      (SELECT COUNT(*) 
+       FROM agents a2
+       JOIN results r2 ON r2.player_id = a2.player_id
+       JOIN rounds rnd ON rnd.round_id = r2.round_id
+       WHERE a2.experiment_id = ea.experiment_id
+         AND a2.attr_name = ea.attr_name
+         AND a2.extra_kwargs::text = ea.extra_kwargs::text
+         AND a2.polling_rate = ea.polling_rate * rnd.round_duration / 240.0
       ) as num_games
     FROM experiment_agents AS ea
     WHERE ea.experiment_id = %s
@@ -47,6 +47,8 @@ FETCH_INDIVIDUAL_PROFITS_SQL = """
         AND a.attr_name = ea.attr_name
         AND a.extra_kwargs::text = ea.extra_kwargs::text
     JOIN results AS r ON r.player_id = a.player_id
+    JOIN rounds rnd ON rnd.round_id = r.round_id
+        AND a.polling_rate = ea.polling_rate * rnd.round_duration / 240.0
     WHERE ea.experiment_id = %s
     ORDER BY ea.player_index, r.round_id;
 """
