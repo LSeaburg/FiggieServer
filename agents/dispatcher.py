@@ -1,46 +1,54 @@
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import importlib
 import time
 import logging
-from typing import List, Tuple, Dict, Any
+from dataclasses import dataclass, field
+from typing import List, Dict, Any
 
 from agents.figgie_interface import FiggieInterface
 import figgie_server.db as db
+import requests
 
-# Configuration: list of (module_name, attribute_name, extra_kwargs)
-# module_name is the Python module (without .py) in the traders folder.
-# attribute_name is the class name (subclass of FiggieInterface) or factory function name.
-# extra_kwargs is a dict of additional parameters for that agent (empty if none).
-AGENTS: List[Tuple[str, str, Dict[str, Any]]] = [
-    ("fundamentalist", "Fundamentalist", {"aggression": 0.8, "buy_ratio": 1.7}),
-    ("fundamentalist", "Fundamentalist", {"aggression": 0.6, "buy_ratio": 1.6}),
-    ("noise_trader", "NoiseTrader", {"aggression": 0.6, "default_val": 7}),
-    ("bottom_feeder", "BottomFeeder", {"aggression": 0.4, "look_depth": 4})
-]
+class ServerStatusUnavailable(RuntimeError):
+    """Raised when the server status endpoint cannot be reached or parsed."""
+
+class ServerBusyError(RuntimeError):
+    """Raised when the server is currently trading and cannot accept a new game."""
+
+class ServerQueuePendingError(RuntimeError):
+    """Raised when the server is waiting with an existing non-empty queue."""
+
+@dataclass
+class AgentConfig:
+    module_name: str
+    attribute_name: str
+    polling_rate: float = 1.0
+    extra_kwargs: Dict[str, Any] = field(default_factory=dict)
 
 def make_agent(
-    entry: Tuple[str, str, Dict[str, Any]],
+    agent_config: AgentConfig,
     name: str,
     server_url: str,
-    polling_rate: float
+    trading_duration: int,
 ) -> FiggieInterface:
     """
     Dynamically import and instantiate an agent with extra kwargs.
-    entry: (module_name, attribute_name, extra_kwargs)
+    agent_config holds: module_name, attribute_name, polling_rate, extra_kwargs
     """
-    module_name, attr_name, extra_kwargs = entry
+    module_name = agent_config.module_name
+    attr_name = agent_config.attribute_name
+    effective_polling_rate = agent_config.polling_rate
+    extra_kwargs = agent_config.extra_kwargs
+
+    true_polling_rate = effective_polling_rate * trading_duration / 240
 
     module = importlib.import_module(f"agents.traders.{module_name}")
     factory = getattr(module, attr_name)
 
     # Base init kwargs
     init_kwargs = {
-        "server_url": server_url,
         "name": name,
-        "polling_rate": polling_rate,
+        "server_url": server_url,
+        "polling_rate": true_polling_rate,
     }
     # Merge agent-specific overrides
     init_kwargs.update(extra_kwargs)
@@ -55,31 +63,80 @@ def make_agent(
             return factory(**init_kwargs)
         except TypeError:
             # Fallback to positional signature
-            return factory(name, server_url, polling_rate)
+            return factory(name, server_url, true_polling_rate)
 
-    raise ValueError(f"Cannot instantiate agent from entry {entry}")
+    raise ValueError(f"Cannot instantiate agent from entry {agent_config}")
 
+def get_server_status(server_url: str) -> Dict[str, Any]:
+    """Fetch and return the server status JSON.
 
-def main():
+    Raises ServerStatusUnavailable on failure.
+    """
+    try:
+        status_resp = requests.get(f"{server_url}/status", timeout=5)
+        status_resp.raise_for_status()
+        return status_resp.json()
+    except Exception as exc:
+        raise ServerStatusUnavailable(
+            f"Failed to fetch server status from {server_url}/status: {exc}"
+        )
+
+def preflight_check(server_url: str) -> Dict[str, Any]:
+    """Validate the server is ready to accept a new game.
+
+    Returns the status payload if OK, otherwise raises a specific exception.
+    """
+    status_data = get_server_status(server_url)
+    server_state = status_data.get("state")
+    try:
+        current_players = int(status_data.get("current_players") or 0)
+    except (TypeError, ValueError):
+        current_players = 0
+
+    if server_state == "trading":
+        raise ServerBusyError("Server is busy: current status is 'trading'.")
+
+    if server_state == "waiting" and current_players != 0:
+        raise ServerQueuePendingError(
+            "Players already queued: server is in 'waiting' with non-empty queue."
+        )
+
+    return status_data
+
+def run_game(
+    agents: List[AgentConfig],
+    server_url: str,
+    experiment_id: int = 0,
+) -> None:
     logging.basicConfig(level=logging.INFO)
-    server_url = os.getenv("SERVER_URL", "http://localhost:5050")
-    polling_rate = float(os.getenv("POLLING_RATE", "0.25"))
-    num_players = int(os.getenv("NUM_PLAYERS", "4"))
 
-    if num_players != len(AGENTS):
-        raise RuntimeError(f"Requested {num_players} players but {len(AGENTS)} configured.")
+    num_players = len(agents)
+    if num_players not in {4, 5}:
+        raise RuntimeError(f"Number of players must be 4 or 5.")
 
-    selected = AGENTS[:num_players]
+    # Pre-flight: check server status and queue
+    status_data = preflight_check(server_url)
+    trading_duration = int(status_data.get("trading_duration"))
+
     logging.info(f"Spawning {num_players} agents...")
     clients = []
 
-    for idx, entry in enumerate(selected, start=1):
-        module_name, attr_name, extra_kwargs = entry
+    for idx, agent_config in enumerate(agents):
+        module_name = agent_config.module_name
+        attr_name = agent_config.attribute_name
+        extra_kwargs = agent_config.extra_kwargs
         player_name = f"{attr_name}{idx}"
         logging.info(f"Starting agent {player_name} ({module_name}.{attr_name})")
-        client = make_agent(entry, player_name, server_url, polling_rate)
+        client = make_agent(agent_config, player_name, server_url, trading_duration)
         # Log agent registration
-        db.log_agent(client.player_id, module_name, attr_name, extra_kwargs, polling_rate)
+        db.log_agent(
+            client.player_id,
+            module_name,
+            attr_name,
+            extra_kwargs,
+            client.polling_rate,
+            experiment_id,
+        )
         clients.append(client)
 
     try:
@@ -119,7 +176,3 @@ def main():
                 c.stop()
             except Exception:
                 logging.exception("Error stopping agent")
-
-
-if __name__ == '__main__':
-    main()

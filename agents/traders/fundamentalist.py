@@ -4,7 +4,7 @@ import requests
 from dataclasses import dataclass
 from typing import Dict, Optional, Set, Any, Literal
 
-from figgie_interface import FiggieInterface
+from agents.figgie_interface import FiggieInterface
 
 SUITS = ["spades", "clubs", "hearts", "diamonds"]
 SUIT_COLORS: Dict[str, str] = {
@@ -33,7 +33,7 @@ class Fundamentalist(FiggieInterface):
         self,
         server_url: str,
         name: str,
-        polling_rate: float = 1.0,
+        polling_rate: float,
         aggression: float = 0.5,
         buy_ratio: float = 1.7
     ) -> None:

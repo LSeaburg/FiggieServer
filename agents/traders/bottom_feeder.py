@@ -4,7 +4,7 @@ import requests
 from dataclasses import dataclass, field
 from typing import Dict, List, Set, TypeVar, FrozenSet, Optional, Literal
 
-from figgie_interface import FiggieInterface
+from agents.figgie_interface import FiggieInterface
 
 SUITS = ["spades", "clubs", "hearts", "diamonds"]
 
@@ -54,12 +54,12 @@ class BottomFeeder(FiggieInterface):
         self,
         server_url: str,
         name: str,
-        polling_rate: float = 1.0,
+        polling_rate: float,
         aggression: float = 0.5,
         look_depth: int = 4
     ) -> None:
         """
-        Initialize the Fundamentalist agent.
+        Initialize the Bottom Feeder agent.
 
         Args:
             server_url: URL of the Figgie server.

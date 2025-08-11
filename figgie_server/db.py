@@ -88,6 +88,25 @@ def init_db():
             );
         ''')
         cursor.execute('''
+            CREATE TABLE IF NOT EXISTS experiments(
+                experiment_id SERIAL PRIMARY KEY,
+                name TEXT,
+                description TEXT,
+                created_at TIMESTAMP WITH TIME ZONE
+            );
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS experiment_agents(
+                experiment_id INTEGER NOT NULL REFERENCES experiments(experiment_id),
+                player_index SMALLINT NOT NULL,
+                module_name TEXT,
+                attr_name TEXT,
+                polling_rate REAL,
+                extra_kwargs JSONB,
+                PRIMARY KEY (experiment_id, player_index)
+            );
+        ''')
+        cursor.execute('''
             CREATE TABLE IF NOT EXISTS results(
                 round_id         TEXT    NOT NULL,
                 player_id        TEXT    NOT NULL,
@@ -129,8 +148,7 @@ def log_round_start(round_id: str, num_players: int, round_duration: int, goal_s
             INSERT INTO rounds
             (round_id, num_players, round_duration, goal_suit, small_suit, start_time)
             VALUES (%s, %s, %s, %s, %s, %s) 
-            ON CONFLICT (round_id) DO NOTHING
-            ''',
+            ON CONFLICT (round_id) DO NOTHING''',
             (round_id, num_players, round_duration, goal_suit, small_suit, datetime.now(timezone.utc))
         )
         conn.commit()
@@ -197,8 +215,7 @@ def log_round_end(round_id: str, results: dict, initial_balances: dict, final_ba
                             %s, %s, %s, %s,
                             %s, %s, %s, %s,
                             %s, %s, %s)
-                ON CONFLICT (round_id, player_id) DO NOTHING
-                ''',
+                ON CONFLICT (round_id, player_id) DO NOTHING''',
                 (
                     round_id, pid,
                     init_bal, final_bal,
@@ -218,10 +235,11 @@ def log_agent(player_id: str, module_name: str, attr_name: str, extra_kwargs: di
     with _db_lock:
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO agents (player_id, module_name, attr_name, extra_kwargs, polling_rate, experiment_id, created_at)
+            INSERT INTO agents 
+            (player_id, module_name, attr_name, extra_kwargs, polling_rate, experiment_id, created_at)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (player_id) DO NOTHING
-        ''',
-        (player_id, module_name, attr_name, json.dumps(extra_kwargs), polling_rate, experiment_id, datetime.now(timezone.utc))
+            ON CONFLICT (player_id) DO NOTHING''',
+            (player_id, module_name, attr_name, json.dumps(extra_kwargs), 
+             polling_rate, experiment_id, datetime.now(timezone.utc))
         )
         conn.commit()

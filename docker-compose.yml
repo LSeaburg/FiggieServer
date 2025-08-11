@@ -3,31 +3,74 @@ services:
     image: postgres:15
     container_name: figgie-db
     environment:
-      - POSTGRES_DB=figgie
-      - POSTGRES_USER=figgie
-      - POSTGRES_PASSWORD=secret_password
+      POSTGRES_DB: "figgie"
+      POSTGRES_USER: "figgie"
+      POSTGRES_PASSWORD: "secret_password"
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U figgie"]
+      interval: 5s
+      retries: 5
 
-  figgie-server:
+  figgie-server-4p:
     build:
       context: .
       dockerfile: figgie_server/Dockerfile
-    container_name: figgie-server
+    container_name: figgie-server-4p
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
       - "5050:5000"
     environment:
-      - NUM_PLAYERS=4
-      - TRADING_DURATION=60
-      - POSTGRES_HOST=db
-      - POSTGRES_DB=figgie
-      - POSTGRES_USER=figgie
-      - POSTGRES_PASSWORD=secret_password
+      NUM_PLAYERS: "4"
+      TRADING_DURATION: "60"
+      POSTGRES_HOST: "db"
+      POSTGRES_DB: "figgie"
+      POSTGRES_USER: "figgie"
+      POSTGRES_PASSWORD: "secret_password"
+    restart: unless-stopped
+
+  figgie-server-5p:
+    build:
+      context: .
+      dockerfile: figgie_server/Dockerfile
+    container_name: figgie-server-5p
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "5051:5000"
+    environment:
+      NUM_PLAYERS: "5"
+      TRADING_DURATION: "60"
+      POSTGRES_HOST: "db"
+      POSTGRES_DB: "figgie"
+      POSTGRES_USER: "figgie"
+      POSTGRES_PASSWORD: "secret_password"
+    restart: unless-stopped
+
+  figgie-dashboard:
+    build:
+      context: .
+      dockerfile: dashboard/Dockerfile
+    container_name: figgie-dashboard
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8050:8050"
+    environment:
+      POSTGRES_HOST: "db"
+      POSTGRES_DB: "figgie"
+      POSTGRES_USER: "figgie"
+      POSTGRES_PASSWORD: "secret_password"
+      FIGGIE_SERVER_4P_URL: "http://figgie-server-4p:5000"
+      FIGGIE_SERVER_5P_URL: "http://figgie-server-5p:5000"
     restart: unless-stopped
 
 volumes:

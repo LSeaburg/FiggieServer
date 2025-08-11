@@ -24,16 +24,16 @@ def test_make_agent_class(monkeypatch):
     # create a fake module with DummyAgent
     mod = types.SimpleNamespace(DummyAgent=DummyAgent)
     monkeypatch.setattr(importlib, "import_module", lambda path: mod)
-    entry = ("dummy_module", "DummyAgent", {"foo": 42})
-    inst = dispatcher.make_agent(entry, "X", "http://u", 0.1)
+    entry = dispatcher.AgentConfig("dummy_module", "DummyAgent", 0.1, {"foo": 42})
+    inst = dispatcher.make_agent(entry, "X", "http://u", 240)
     assert isinstance(inst, DummyAgent)
     assert inst.foo == 42
 
 def test_make_agent_factory_kw(monkeypatch):
     mod = types.SimpleNamespace(my_factory=dummy_factory_kw)
     monkeypatch.setattr(importlib, "import_module", lambda path: mod)
-    entry = ("dummy_module", "my_factory", {"foo": 7})
-    inst = dispatcher.make_agent(entry, "Y", "http://u", 0.2)
+    entry = dispatcher.AgentConfig("dummy_module", "my_factory", 0.2, {"foo": 7})
+    inst = dispatcher.make_agent(entry, "Y", "http://u", 240)
     assert isinstance(inst, DummyAgent)
     assert inst.foo == 7
 
@@ -42,14 +42,14 @@ def test_make_agent_factory_pos_fallback(monkeypatch):
     mod = types.SimpleNamespace(pos_factory=dummy_factory_pos)
     monkeypatch.setattr(importlib, "import_module", lambda path: mod)
     # First attempt factory(**kwargs) will raise TypeError; fallback to positional args should succeed
-    entry = ("dummy_module", "pos_factory", {})
-    inst = dispatcher.make_agent(entry, "Z", "http://u", 0.3)
+    entry = dispatcher.AgentConfig("dummy_module", "pos_factory", 0.3, {})
+    inst = dispatcher.make_agent(entry, "Z", "http://u", 240)
     assert isinstance(inst, DummyAgent)
     assert inst.foo == "pos"
 
 def test_make_agent_invalid(monkeypatch):
     mod = types.SimpleNamespace(not_callable=123)
     monkeypatch.setattr(importlib, "import_module", lambda path: mod)
-    entry = ("dummy_module", "not_callable", {})
+    entry = dispatcher.AgentConfig("dummy_module", "not_callable", 0.1, {})
     with pytest.raises(ValueError):
-        dispatcher.make_agent(entry, "Bad", "http://u", 0.1)
+        dispatcher.make_agent(entry, "Bad", "http://u", 240)

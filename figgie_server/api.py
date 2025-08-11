@@ -1,5 +1,6 @@
 import threading
 from flask import Flask, request, jsonify, current_app
+import os
 
 from figgie_server.game import NUM_PLAYERS
 
@@ -60,3 +61,14 @@ def action():
                 return jsonify(error=err), 400
             return jsonify(success=True, **result), 200
         return jsonify(error="Invalid action type"), 400
+
+@app.route("/status", methods=["GET"])
+def status():
+    state, time_left = current_app.game.get_game_status()
+    return jsonify(
+        state=state,
+        time_left=time_left,
+        current_players=len(current_app.game.players),
+        total_players=int(os.getenv("NUM_PLAYERS", "4")),
+        trading_duration=int(os.getenv("TRADING_DURATION", str(4 * 60))),
+        ), 200
