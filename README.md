@@ -150,7 +150,7 @@ See [dasshboard/README.md](dasshboard/README.md) for full specs and dashboard in
 
 ## Creating Your Agent
 
-Examples: `agents/noise_trader.py`, `agents/fundamentalist.py`. Both follow the design in [this paper](https://arxiv.org/pdf/2110.00879).
+Examples: `agents/traders/noise_trader.py`, `agents/traders/fundamentalist.py`. Both follow the design in [this paper](https://arxiv.org/pdf/2110.00879).
 
 ### FiggieInterface
 
@@ -177,19 +177,20 @@ Examples: `agents/noise_trader.py`, `agents/fundamentalist.py`. Both follow the 
 
 ### Dispatcher
 
-Configure your agents in `agents/dispatcher.py` by editing the `AGENTS` list:
+Configure your agents in `agents/examples/run_sample_agents.py` by editing the `AGENTS` list:
 
 ```python
-AGENTS = [
-    ("noise_trader.py", "NoiseTrader", {"aggression": 0.5}),
-    ("fundamentalist.py", "Fundamentalist", {"buy_ratio": 1.2}),
+AGENTS: List[AgentConfig] = [
+    AgentConfig("fundamentalist", "Fundamentalist", 1.0, {"aggression": 0.5, "buy_ratio": 1.2}),
+    AgentConfig("noise_trader", "NoiseTrader", 1.0, {"aggression": 0.6, "default_val": 5}),
+    ...
 ]
 ```
 
 Run them:
 
 ```shell
-python agents/dispatcher.py
+python agents/examples/run_sample_agents.py
 ```
 
 Results are logged to PostgreSQL for later analysis or to view in the dashboard (once available).
