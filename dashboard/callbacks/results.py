@@ -35,13 +35,12 @@ def register_results_callbacks(app: Dash, data_manager):
         profit_df = data_manager.fetch_individual_profits(selected_experiment)
         profit_fig = profit_box_plot(profit_df)
 
+        # Minimal sanitization for DataTable/JSON
+        if 'avg_profit' in df.columns:
+            df['avg_profit'] = pd.to_numeric(df['avg_profit'], errors='coerce')
+        df = df.where(pd.notna(df), None)
+
         records = df.to_dict('records')
-        for record in records:
-            for key, value in record.items():
-                if hasattr(value, 'as_tuple'):
-                    record[key] = float(value)
-                elif pd.isna(value):
-                    record[key] = None
 
         return records, json.dumps(records), profit_fig
 
