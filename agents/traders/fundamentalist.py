@@ -97,12 +97,14 @@ class Fundamentalist(FiggieInterface):
     def _update_multinomials(self) -> None:
         """
         Compute normalized multinomial probability weight.
+        Probability a given deck is the current deck in play.
         """
         self.multinomials.clear()
         seen_cards = self._total_known_cards()
 
         m_values = dict()
 
+        # Generate all possible decks
         for twelve in SUITS:
             for eight in set(SUITS) - {twelve}:
                 deck = {s: 10 for s in SUITS}
@@ -139,6 +141,8 @@ class Fundamentalist(FiggieInterface):
             self.hand[suit] += 1
             return res
 
+        # Expected value is 0 when the suit is not the goal suit
+        # Generate all decks where the suit is the goal suit
         color = SUIT_COLORS[suit]
         twelve = next(s for s in SUITS if s != suit and SUIT_COLORS[s] == color)
         possible_eights = set(SUITS) - {twelve}
@@ -149,6 +153,7 @@ class Fundamentalist(FiggieInterface):
             deck[twelve] = 12
             deck[eight] = 8
 
+            # See page 6 in paper for math equation
             m = self.multinomials[dict_to_key(deck)]
             x = 5 if eight == suit else 6
             if self.hand[suit] >= x:
