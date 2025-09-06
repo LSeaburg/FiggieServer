@@ -2,6 +2,7 @@ import math
 import random
 import requests
 from dataclasses import dataclass
+import itertools
 from typing import Dict, Optional, Set, Any, Literal
 
 from agents.figgie_interface import FiggieInterface
@@ -13,6 +14,10 @@ SUIT_COLORS: Dict[str, str] = {
     "hearts": "red",
     "diamonds": "red"
 }
+POSSIBLE_DECKS: list[dict[str, int]] = [
+    dict(zip(SUITS, perm))
+    for perm in set(itertools.permutations([8, 10, 10, 12]))
+]
 
 def dict_to_key(d):
     return tuple(sorted(d.items()))
@@ -61,8 +66,8 @@ class Fundamentalist(FiggieInterface):
         self.peek_offers: Dict[str, Dict[str, bool]] = {}
         # Tracks how many cards each opponent has bought
         self.bought_cards: Dict[str, Dict[str, int]] = {}
-        # Caches multinomials for faster compute
-        self.multinomials: Dict[tuple, float] = {}
+        # Caches deck_probabilities for faster compute
+        self.deck_probabilities: Dict[tuple, float] = {}
 
         # Register event handlers
         self.on_tick(self._handle_tick)
@@ -94,23 +99,17 @@ class Fundamentalist(FiggieInterface):
                     total[suit] += 1
         return total
 
-    def _update_multinomials(self) -> None:
+    def _update_deck_probabilities(self) -> None:
         """
         Compute normalized multinomial probability weight.
         Probability a given deck is the current deck in play.
         """
-        self.multinomials.clear()
+        self.deck_probabilities.clear()
         seen_cards = self._total_known_cards()
 
         m_values = dict()
 
-        # Generate all possible decks
-        for twelve in SUITS:
-            for eight in set(SUITS) - {twelve}:
-                deck = {s: 10 for s in SUITS}
-                deck[twelve] = 12
-                deck[eight] = 8
-
+        for deck in POSSIBLE_DECKS:
                 m = 1
                 for suit in SUITS:
                     k = seen_cards[suit]
@@ -125,7 +124,7 @@ class Fundamentalist(FiggieInterface):
         total = sum(m_values.values())
 
         for deck, m in m_values.items():
-            self.multinomials[deck] = m / total
+            self.deck_probabilities[deck] = m / total
 
     def _get_exp_val(
         self,
@@ -144,22 +143,21 @@ class Fundamentalist(FiggieInterface):
         # Expected value is 0 when the suit is not the goal suit
         # Generate all decks where the suit is the goal suit
         color = SUIT_COLORS[suit]
-        twelve = next(s for s in SUITS if s != suit and SUIT_COLORS[s] == color)
-        possible_eights = set(SUITS) - {twelve}
+        twelve_suit = next(s for s in SUITS if s != suit and SUIT_COLORS[s] == color)
 
         res = 0.0
-        for eight in possible_eights:
-            deck = {s: 10 for s in SUITS}
-            deck[twelve] = 12
-            deck[eight] = 8
+        for deck in POSSIBLE_DECKS:
+            # If 'suit' is not the goal suit of this deck it will not add to the expected value 
+            if deck[twelve_suit] != 12:
+                continue
 
             # See page 6 in paper for math equation
-            m = self.multinomials[dict_to_key(deck)]
-            x = 5 if eight == suit else 6
+            m = self.deck_probabilities[dict_to_key(deck)]
+            x = deck[suit] // 2 + 1  # outright majority of goal suit
             if self.hand[suit] >= x:
                 v = 0
             else:
-                p = 120 if eight == suit else 100
+                p = 200 - (10 * deck[suit])  # payout bonus for goal suit
                 a = (p*(1 - self.buy_ratio)) / (1-(self.buy_ratio**x))
                 v = self.buy_ratio**self.hand[suit] * a
             res += m * (10 + v) 
@@ -178,7 +176,7 @@ class Fundamentalist(FiggieInterface):
         self.initial_hand[self.player_id] = hand.copy()
         self.hand = hand.copy()
 
-        self._update_multinomials()
+        self._update_deck_probabilities()
 
     def _handle_tick(self, _) -> None:
         """
@@ -199,12 +197,10 @@ class Fundamentalist(FiggieInterface):
         if action == 'buy':
             bid_price = random.randint(1, exp_val)
             price = min(bid_price, best_ask) if best_ask is not None else bid_price
-            self.market[suit].highest_bid = price
             op = self.bid
         else:
             ask_price = random.randint(exp_val, 2 * exp_val)
             price = max(ask_price, best_bid) if best_bid is not None else ask_price
-            self.market[suit].lowest_ask = price
             op = self.offer
 
         print(f"{self.player_id}: Send {action} order for {suit} at {price}")
@@ -223,16 +219,19 @@ class Fundamentalist(FiggieInterface):
     def _handle_offer(self, player: str, price: int, suit: str) -> None:
         """
         Update lowest ask when an opponent offers.
-        Register new cards as seen and update multinomials when necessary.
+        Register new cards as seen and update deck probabilities when necessary.
         """
         self.market[suit].lowest_ask = price
+        if player == self.player_id:
+            return
+
         new_peek = not self.peek_offers[player][suit]
 
         # Mark peek if they haven't bought that suit before
         if self.bought_cards.get(player, {}).get(suit, 0) == 0:
             self.peek_offers[player][suit] = True
             if new_peek:
-                self._update_multinomials()
+                self._update_deck_probabilities()
 
     def _handle_trade(self, buyer: str, seller: str, _, suit: str) -> None:
         """

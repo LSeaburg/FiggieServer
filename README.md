@@ -165,11 +165,11 @@ Examples: `agents/traders/noise_trader.py`, `agents/traders/fundamentalist.py`. 
 - `interface.cancel_bids_and_offers(suit: str)`: Cancel all your orders for a given suit.
 
 **Event hooks**:
-- `on_start(hand: Dict[str, Any], opponent_ids: Set[str])`: Fired once when trading begins, with your initial hand and polling ids.
+- `on_start(hand: Dict[str, int], opponent_ids: Set[str])`: Fired once when trading begins, with your initial hand and polling ids.
 - `on_tick(remaining_time: int)`: Fired every polling cycle with remaining time (seconds).
-- `on_bid(player_id: str, price: int, suit: str)`: Fired on new highest bids by any player.
-- `on_offer(player_id: str, price: int, suit: str)`: Fired on new lowest asks by any player.
-- `on_cancel(order_type: str, old_pid: str, old_price: int, new_pid: Optional[str], new_price: Optional[int], suit: str)`: Fired when orders are canceled or outbid.
+- `on_bid(player_id: str, price: int, suit: str)`: Fired on new highest bids by any player (including self).
+- `on_offer(player_id: str, price: int, suit: str)`: Fired on new lowest asks by any player (including self).
+- `on_cancel(order_type: Literal['bid', 'offer'], old_pid: str, old_price: int, new_pid: Optional[str], new_price: Optional[int], suit: str)`: Fired when orders are canceled or outbid.
 - `on_transaction(buyer_id: str, seller_id: str, price: int, suit: str)`: Fired on each completed trade.
 
 **Attributes**:

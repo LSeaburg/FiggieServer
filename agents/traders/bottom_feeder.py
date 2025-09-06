@@ -142,12 +142,10 @@ class BottomFeeder(FiggieInterface):
         if action == 'buy':
             bid_price = random.randint(1, exp_val)
             price = min(bid_price, best_ask) if best_ask is not None else bid_price
-            self.market[suit].highest_bid = price
             op = self.bid
         else:
             ask_price = random.randint(exp_val, 2 * exp_val)
             price = max(ask_price, best_bid) if best_bid is not None else ask_price
-            self.market[suit].lowest_ask = price
             op = self.offer
         
         print(f"{self.player_id}: Send {action} order for {suit} at {price}")

@@ -16,7 +16,7 @@ class State:
     state: Optional[str]
     time_left: Optional[int]
     pot: Optional[int] = None
-    hand: Optional[Dict[str, Any]] = None
+    hand: Optional[Dict[str, int]] = None
     market: Dict[str, Any] = field(default_factory=dict)
     balances: Dict[str, Any] = field(default_factory=dict)
     trades: List['Trade'] = field(default_factory=list)
@@ -195,7 +195,7 @@ class FiggieInterface:
             pb = pm.get("highest_bid") or {}
             cb = cm.get("highest_bid") or {}
             # New best bid
-            if cb and (not pb or int(cb.get("price")) > int(pb.get("price"))) and cb.get("player_id") != self.player_id:
+            if cb and (not pb or int(cb.get("price")) > int(pb.get("price"))): #and cb.get("player_id") != self.player_id:
                 for fn in set(self._handlers["bid"]):
                     try:
                         fn(cb["player_id"], int(cb["price"]), suit)  # type: ignore
@@ -216,7 +216,7 @@ class FiggieInterface:
             po = pm.get("lowest_ask") or {}
             co = cm.get("lowest_ask") or {}
             # New best offer
-            if co and (not po or int(co.get("price")) < int(po.get("price"))) and co.get("player_id") != self.player_id:
+            if co and (not po or int(co.get("price")) < int(po.get("price"))): #and co.get("player_id") != self.player_id:
                 for fn in set(self._handlers["offer"]):
                     try:
                         fn(co["player_id"], int(co["price"]), suit)  # type: ignore
