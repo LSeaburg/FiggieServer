@@ -58,7 +58,8 @@ class FiggieInterface:
         server_url: str,
         name: str,
         polling_rate: float = 1.0,
-        jitter_factor: float = 0.1
+        jitter_factor: float = 0.1,
+        test_mode: bool = False
     ) -> None:
         """
         Initialize the Figgie client interface.
@@ -90,6 +91,9 @@ class FiggieInterface:
         # Initialize last state to default for consistent behavior
         self._last_state: State = State(state=None, time_left=None)
         self._last_trade_index: int = 0
+
+        if test_mode:
+            return
 
         # Join the game and start polling
         self._join()
