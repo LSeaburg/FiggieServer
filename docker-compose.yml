@@ -28,7 +28,7 @@ services:
       - "5050:5000"
     environment:
       NUM_PLAYERS: "4"
-      TRADING_DURATION: "60"
+      TRADING_DURATION: "90"
       POSTGRES_HOST: "db"
       POSTGRES_DB: "figgie"
       POSTGRES_USER: "figgie"
@@ -47,7 +47,7 @@ services:
       - "5051:5000"
     environment:
       NUM_PLAYERS: "5"
-      TRADING_DURATION: "60"
+      TRADING_DURATION: "90"
       POSTGRES_HOST: "db"
       POSTGRES_DB: "figgie"
       POSTGRES_USER: "figgie"
@@ -71,6 +71,8 @@ services:
       POSTGRES_PASSWORD: "secret_password"
       FIGGIE_SERVER_4P_URL: "http://figgie-server-4p:5000"
       FIGGIE_SERVER_5P_URL: "http://figgie-server-5p:5000"
+    volumes:
+      - ./agents:/app/agents
     restart: unless-stopped
 
 volumes:

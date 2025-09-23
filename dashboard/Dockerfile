@@ -13,7 +13,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY dashboard ./dashboard
 COPY figgie_server/db.py ./figgie_server/db.py
-COPY agents ./agents
 
 # Expose Dash default port
 EXPOSE 8050
